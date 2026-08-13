@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+build/
+
+# Virtual envs
+.venv/
+.venv-crewai/
+venv/
+env/
+
+# Poetry - keep poetry.lock committed for reproducibility
+
+# Environment (REAL KEYS - never commit)
+.env
+.env.local
+.env.production
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs / DB
+*.log
+*.db
+*.db-journal
+*.sqlite
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+test-results/
+playwright-report/
+
+# Frontend build output (regenerated from source)
+frontend/dist/
+node_modules/
+
+# Dashboard legacy
+dashboard/
+
+# Data (local bifrost state - not source)
+data/bifrost/
+
+# Benchmark local DBs
+bench/*.db
+
+# Coverage
+coverage/
+*.lcov
+
+# OS
+Thumbs.db
+
+# Local notes / private artifacts (not shipped with code)
+SUBMISSION.md
+DEMO_SCRIPT.md
+.env.notification
+
+# Local recordings, screenshots, scratch
+recordings/
+*.mov
+*.mp4
+*.webm
+scratch/
+tmp/
+*.bak
+*.orig
+*.rej
+
+# Editor / OS noise (extra)
+*~
+.AppleDouble
+.LSOverride
+.envrc
+scripts/.env.notification
+
+# sanity suite cached workspace keys
+scripts/sanity/.sanity_state.json
+
+# Playwright saved login session (contains a real JWT) + generated reports
+frontend/e2e/.auth/
+frontend/e2e/report/
+media/
+.gateway.log
+.gateway.pid

@@ -1,0 +1,32 @@
+Agnos Proxy
+Copyright (c) 2026 Agnos Proxy Contributors
+
+This product includes third-party data and integrates with third-party
+software, as noted below.
+
+────────────────────────────────────────────────────────────────────────
+Bundled data
+────────────────────────────────────────────────────────────────────────
+data/model_prices.json - and data/provider_catalog.yaml, which is generated
+from it - are derived from the LiteLLM model-price dataset
+("model_prices_and_context_window.json").
+
+    LiteLLM
+    https://github.com/BerriAI/litellm
+    Copyright (c) BerriAI
+    Licensed under the MIT License.
+
+This dataset is redistributed here under the terms of the MIT License. The
+full license text is available at:
+https://github.com/BerriAI/litellm/blob/main/LICENSE
+
+────────────────────────────────────────────────────────────────────────
+Optional translation engines (not bundled)
+────────────────────────────────────────────────────────────────────────
+Agnos Proxy can route through third-party translation engines. These are NOT
+included in this repository; they run as separate services under their own
+licenses:
+
+    Bifrost  - https://github.com/maximhq/bifrost    (Apache-2.0)
+    LiteLLM  - https://github.com/BerriAI/litellm     (MIT)
+    Portkey  - https://github.com/portkey-ai/gateway  (MIT)

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / discussion
+    url: https://github.com/siva010928/agnos-proxy-oss/discussions
+    about: Ask "how do I...?", share ideas, or get help. Not for bug reports.
+  - name: Report a security vulnerability
+    url: https://github.com/siva010928/agnos-proxy-oss/security/advisories/new
+    about: Privately disclose a vulnerability (never file security issues publicly).

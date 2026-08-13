@@ -1,0 +1,42 @@
+{
+  "name": "agnos-proxy-gateway-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report e2e/report"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^7.54.3",
+    "@babylonjs/gui": "^7.54.3",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@react-three/postprocessing": "^2.16.3",
+    "@tanstack/react-query": "^5.101.0",
+    "framer-motion": "^11.18.2",
+    "gsap": "^3.15.0",
+    "lucide-react": "^0.460.0",
+    "postprocessing": "^6.36.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.4",
+    "recharts": "^2.12.7",
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.53.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}

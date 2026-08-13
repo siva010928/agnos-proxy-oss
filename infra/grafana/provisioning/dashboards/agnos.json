@@ -1,0 +1,72 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "title": "Requests/sec by provider",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [{"expr": "sum(rate(gateway_requests_total[1m])) by (provider)", "legendFormat": "{{provider}}"}]
+    },
+    {
+      "title": "Gateway overhead p50/p95/p99 (s)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(gateway_overhead_seconds_bucket{stage=\"total\"}[5m])) by (le))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum(rate(gateway_overhead_seconds_bucket{stage=\"total\"}[5m])) by (le))", "legendFormat": "p95"},
+        {"expr": "histogram_quantile(0.99, sum(rate(gateway_overhead_seconds_bucket{stage=\"total\"}[5m])) by (le))", "legendFormat": "p99"}
+      ]
+    },
+    {
+      "title": "Total request latency p50/p95/p99 (s)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, sum(rate(gateway_request_seconds_bucket[5m])) by (le))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, sum(rate(gateway_request_seconds_bucket[5m])) by (le))", "legendFormat": "p95"},
+        {"expr": "histogram_quantile(0.99, sum(rate(gateway_request_seconds_bucket[5m])) by (le))", "legendFormat": "p99"}
+      ]
+    },
+    {
+      "title": "Cost USD (cumulative) by workspace",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [{"expr": "sum(gateway_cost_usd_total) by (workspace)", "legendFormat": "{{workspace}}"}]
+    },
+    {
+      "title": "Tokens/sec by direction",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16},
+      "targets": [{"expr": "sum(rate(gateway_tokens_total[1m])) by (direction)", "legendFormat": "{{direction}}"}]
+    },
+    {
+      "title": "Guardrail decisions",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16},
+      "targets": [{"expr": "sum(rate(gateway_guardrail_events_total[5m])) by (action)", "legendFormat": "{{action}}"}]
+    },
+    {
+      "title": "Governance events dropped",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16},
+      "targets": [{"expr": "gateway_governance_events_dropped_total"}]
+    },
+    {
+      "title": "Per-provider latency p99 (s)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "targets": [{"expr": "histogram_quantile(0.99, sum(rate(gateway_provider_latency_seconds_bucket[5m])) by (le, provider))", "legendFormat": "{{provider}}"}]
+    },
+    {
+      "title": "Fallbacks/sec (primary->next)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+      "targets": [{"expr": "sum(rate(gateway_fallbacks_total[5m])) by (from_provider, to_provider)", "legendFormat": "{{from_provider}}->{{to_provider}}"}]
+    }
+  ],
+  "schemaVersion": 39,
+  "title": "Agnos Proxy",
+  "time": {"from": "now-30m", "to": "now"},
+  "refresh": "5s"
+}

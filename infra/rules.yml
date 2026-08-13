@@ -1,0 +1,35 @@
+groups:
+  - name: agnos-proxy-gateway-slo
+    rules:
+      # ── recording rules: gateway overhead SLIs (excl. provider time) ──
+      - record: gateway:overhead_seconds:p50
+        expr: histogram_quantile(0.50, sum(rate(gateway_overhead_seconds_bucket{stage="total"}[5m])) by (le))
+      - record: gateway:overhead_seconds:p99
+        expr: histogram_quantile(0.99, sum(rate(gateway_overhead_seconds_bucket{stage="total"}[5m])) by (le))
+      - record: gateway:error_ratio:5m
+        expr: |
+          sum(rate(gateway_requests_total{status="error"}[5m]))
+          / clamp_min(sum(rate(gateway_requests_total[5m])), 1)
+
+  - name: agnos-proxy-gateway-alerts
+    rules:
+      # SLO: gateway overhead p99 must stay under 25 ms
+      - alert: GatewayOverheadHigh
+        expr: gateway:overhead_seconds:p99 > 0.025
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Gateway overhead p99 above SLO (25 ms)"
+          description: "p99 gateway overhead is {{ $value | humanizeDuration }} over the last 5m."
+      - alert: GatewayErrorRateHigh
+        expr: gateway:error_ratio:5m > 0.02
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Gateway error ratio above 2%"
+      - alert: GovernanceEventsDropping
+        expr: increase(gateway_governance_events_dropped_total[5m]) > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "Governance bus is dropping events (queue overflow)"

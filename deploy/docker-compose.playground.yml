@@ -1,0 +1,62 @@
+# Agnos Proxy - PLAYGROUND compose (public prototype demo).
+# Slim, zero-cost stack: gateway + postgres + redis only, ENGINE=echo (deterministic
+# canned responses, no real provider keys/calls). Powers the dashboard, the 3D explainer
+# pages and the live engine-swap UX for visitors. NOT for real traffic - self-hosters use
+# docker-compose.yml / docker-compose.prod.yml with real engines + keys.
+#   docker compose -f deploy/docker-compose.playground.yml --env-file ../.env up -d --build
+name: agnos-playground
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: agnos-playground-pg
+    environment:
+      POSTGRES_USER: agnos
+      POSTGRES_PASSWORD: agnos
+      POSTGRES_DB: agnos_gateway
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agnos -d agnos_gateway"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: agnos-playground-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: agnos-playground-gateway
+    environment:
+      GATEWAY_HOST: "0.0.0.0"
+      GATEWAY_PORT: "8090"
+      ENGINE: "echo"                 # deterministic, $0, no provider keys
+      PLAYGROUND_MODE: "true"        # UI shows the prototype ribbon
+      PREVIEW_MODE: "true"           # no login wall for visitors
+      GOVERNANCE_DB_URL: "postgresql+asyncpg://agnos:agnos@postgres:5432/agnos_gateway"
+      REDIS_URL: "redis://redis:6379"
+      KAFKA_BROKERS: ""              # governance bus disabled in the prototype
+      JAEGER_UI_URL: ""
+      GATEWAY_MASTER_KEY: "${GATEWAY_MASTER_KEY:?set GATEWAY_MASTER_KEY in .env}"
+    ports:
+      - "80:8090"                    # serve the demo on http://<vm-ip>/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pg_data: {}

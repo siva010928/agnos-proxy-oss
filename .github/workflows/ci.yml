@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend unit tests (ENGINE=echo, $0)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: agnos
+          POSTGRES_PASSWORD: agnos
+          POSTGRES_DB: agnos_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agnos -d agnos_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      GOVERNANCE_DB_URL: postgresql+asyncpg://agnos:agnos@localhost:5432/agnos_test
+      ENGINE: echo
+      GATEWAY_MASTER_KEY: ci-test-key
+      KAFKA_BROKERS: ""
+      REDIS_URL: ""
+      PLAYGROUND_MODE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install (main + dev)
+        run: |
+          pipx install poetry || pip install poetry
+          poetry install --with dev --without demo --no-interaction
+      - name: Unit + BVT tests (deterministic, no real providers)
+        # Integration tests auto-skip without a running gateway; live tests are opt-in.
+        run: poetry run pytest -m "not live and not integration" -q
+
+  frontend:
+    name: Dashboard build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build dashboard
+        run: |
+          cd frontend
+          npm ci --no-audit --no-fund
+          npm run build

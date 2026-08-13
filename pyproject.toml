@@ -1,0 +1,80 @@
+[tool.poetry]
+name = "agnos-proxy-llm-gateway"
+version = "0.1.0"
+description = "Agnos Proxy - the gateway-agnostic control plane for LLM routing, cost-tracking and observability. OpenAI-compatible governance proxy over a swappable BackendEngine."
+authors = ["Agnos Proxy Contributors"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "gateway" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+# Web framework
+fastapi = "^0.115.0"
+uvicorn = { extras = ["standard"], version = "^0.32.0" }
+
+# OpenAI SDK - request validation + response/chunk Pydantic types
+openai = "^1.55.0"
+
+# Persistence: Postgres (default) + SQLite (fallback)
+sqlalchemy = { extras = ["asyncio"], version = "^2.0.0" } # 2.0.1
+asyncpg = "^0.30.0"
+aiosqlite = "^0.20.0"
+greenlet = "^3.1.0"
+
+# Encryption (envelope encryption for workspace creds)
+cryptography = "^44.0.0"
+
+# Token counting (estimate; chunker / TPM)
+tiktoken = "^0.12.0"
+
+# CEL rules for guardrails
+cel-python = "^0.1.5"
+
+# Structured logging
+structlog = "^24.4.0"
+
+# Kafka governance observer (optional at runtime)
+aiokafka = "^0.12.0"
+
+# Prometheus metrics observer (optional)
+prometheus-client = "^0.21.0"
+
+# HTTP client (BifrostEngine + demos)
+httpx = "^0.28.0"
+
+# Config
+python-dotenv = "^1.0.0"
+
+# DirectEngine (proof-of-swap) - Pydantic AI + boto3 for Bedrock
+pydantic-ai = "^1.0.0"
+opentelemetry-sdk = "^1.42.1"
+opentelemetry-exporter-otlp-proto-grpc = "^1.42.1"
+opentelemetry-instrumentation-fastapi = "^0.63b1"
+redis = ">=5.0"
+itsdangerous = "^2.2.0"
+
+[tool.poetry.group.demo.dependencies]
+# Demo components - prove any OpenAI-compatible framework works
+langchain = "^1.0"
+langchain-openai = "^1.0"
+langgraph = "^1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-asyncio = "^0.24.0"
+psutil = "^7.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-m 'not live'"
+markers = [
+    "live: opt-in smoke tests that hit a running gateway + real providers (run with -m live)",
+    "integration: BVT \u2014 end-to-end tests against a running gateway with ENGINE=echo ($0 upstream)",
+]

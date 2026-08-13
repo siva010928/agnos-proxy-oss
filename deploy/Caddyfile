@@ -1,0 +1,39 @@
+# Agnos LLM Gateway - Caddy reverse proxy (auto-TLS)
+# Order matters: specific paths BEFORE the catch-all.
+{$DOMAIN:localhost} {
+    # ── Observability (MUST come before catch-all) ──
+    # Grafana expects /grafana/ prefix (GF_SERVER_SERVE_FROM_SUB_PATH=true)
+    @grafana path /grafana*
+    handle @grafana {
+        reverse_proxy grafana:3000
+    }
+
+    # Jaeger expects /jaeger prefix (QUERY_BASE_PATH=/jaeger)
+    @jaeger path /jaeger*
+    handle @jaeger {
+        reverse_proxy jaeger:16686
+    }
+
+    @kafkaui path /kafka-ui*
+    handle @kafkaui {
+        reverse_proxy kafka-ui:8080
+    }
+
+    @prom path /prometheus*
+    handle @prom {
+        uri strip_prefix /prometheus
+        reverse_proxy prometheus:9090
+    }
+
+    # ── Gateway (catch-all - LAST) ──
+    handle {
+        reverse_proxy gateway:8090
+    }
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+    encode gzip zstd
+}

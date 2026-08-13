@@ -1,0 +1,63 @@
+name: Bug report
+description: Something isn't working as expected
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please do NOT report security vulnerabilities here - see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug - expected vs actual behavior.
+      placeholder: When I ... I expected ... but got ...
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Configure ...
+        2. Send request ...
+        3. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / error
+      description: Gateway logs (.gateway.log) or `docker compose logs`. Redact secrets.
+      render: shell
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Active engine
+      options: [bifrost, litellm, portkey, direct, echo, not sure]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: e.g. main @ 49aa8e8
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: OS, Python, Node, Docker versions
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight
+      options:
+        - label: I'm on the latest `main`
+          required: true
+        - label: I searched existing issues
+          required: true
+        - label: My logs contain no real secrets/keys
+          required: true

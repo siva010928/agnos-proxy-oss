@@ -1,0 +1,172 @@
+# Agnos Proxy - local stack
+# Bifrost (provider translation engine) + Postgres (our governance store).
+# Kafka + dashboard are added in later build steps.
+
+services:
+  bifrost:
+    image: maximhq/bifrost:latest
+    container_name: agnos-proxy-bifrost
+    environment:
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8080"
+      LOG_LEVEL: "info"
+      LOG_STYLE: "json"
+    ports:
+      - "8099:8080"
+    volumes:
+      - bifrost_data:/app/data
+    restart: unless-stopped
+
+  # ── Commodity translator: Portkey OSS gateway (STATELESS) ──────────────
+  # Holds NO credentials. The Agnos Proxy boundary injects the provider key per
+  # request (x-portkey-provider + Authorization / x-portkey-aws-*). This is the
+  # "safe harbor" engine we evacuate onto - a compromise leaks no key vault.
+  portkey:
+    image: portkeyai/gateway:latest
+    container_name: agnos-proxy-portkey
+    ports:
+      - "8787:8787"
+    restart: unless-stopped
+
+  # ── Commodity translator: LiteLLM proxy (STATEFUL) ─────────────────────
+  # Holds the provider keys itself (from the host .env) - the attackable engine
+  # in the demo. Distinct from the CVE lab (:4000); this one serves real traffic
+  # on :4100 so the live engine swap is demonstrable.
+  # ── Commodity translator: LiteLLM proxy (STATEFUL, production-grade) ───
+  # Genuinely stateful: it has its OWN Postgres and store_model_in_db=true. The
+  # gateway SYNCS provider models/creds into it at runtime (gateway/litellm/sync.py)
+  # via /model/new - mirroring how we sync managed keys into Bifrost. NO provider
+  # keys are baked in via env; they arrive from our encrypted vault over the admin
+  # API and live in THIS proxy's database (the attackable vault the demo evacuates).
+  litellm-engine-db:
+    image: postgres:16
+    container_name: agnos-proxy-litellm-engine-db
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+      POSTGRES_DB: litellm
+    volumes:
+      - litellm_engine_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  litellm-engine:
+    build:
+      context: ./infra/litellm-engine
+      dockerfile: Dockerfile
+    image: agnos-proxy-litellm-engine:local
+    container_name: agnos-proxy-litellm-engine
+    depends_on:
+      litellm-engine-db:
+        condition: service_healthy
+    environment:
+      LITELLM_MASTER_KEY: "sk-1234"
+      DATABASE_URL: "postgresql://litellm:litellm@litellm-engine-db:5432/litellm"
+    volumes:
+      - ./infra/litellm-engine/config.yaml:/app/config.yaml:ro
+    ports:
+      - "4100:4000"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: agnos-proxy-gateway-pg
+    environment:
+      POSTGRES_USER: agnos
+      POSTGRES_PASSWORD: agnos
+      POSTGRES_DB: agnos_gateway
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agnos -d agnos_gateway"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: agnos-proxy-kafka
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:29092"
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: agnos-proxy-kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: agnos
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      - "8085:8080"
+    depends_on: [kafka]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: agnos-proxy-redis
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: agnos-proxy-prometheus
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/rules.yml:/etc/prometheus/rules.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: agnos-proxy-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: agnos
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+  # Jaeger all-in-one (WAVE 19 TRACK D1) \u2014 OTLP gRPC ingest + UI.
+  # Exporter target: OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+  # UI:               http://localhost:16686
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    container_name: agnos-proxy-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    restart: unless-stopped
+
+volumes:
+  bifrost_data:
+  pg_data:
+  litellm_engine_pg:

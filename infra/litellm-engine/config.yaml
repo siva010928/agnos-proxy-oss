@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# LiteLLM proxy as a STATELESS commodity translator ENGINE.
+#
+# NO stored provider keys, NO model DB. Provider credentials arrive PER REQUEST
+# from the Agnos Proxy vault via LiteLLM "Clientside Credentials"
+# (docs.litellm.ai/docs/proxy/clientside_auth): each per-provider wildcard model
+# below declares `configurable_clientside_auth_params`, and the Agnos Proxy boundary
+# passes the decrypted key in the request body for that ONE call. The proxy holds
+# and records nothing (no database_url, no store_model_in_db, logging off).
+#
+# Security consequence: a compromise of this engine exposes only the traffic in
+# flight during the window - there is NO key store to dump (same property as
+# Portkey/Bifrost stateless + our owned Direct engine).
+# ─────────────────────────────────────────────────────────────────────────────
+model_list:
+  - model_name: "anthropic/*"
+    litellm_params:
+      model: "anthropic/*"
+      configurable_clientside_auth_params: ["api_key", "api_base"]
+  - model_name: "gemini/*"
+    litellm_params:
+      model: "gemini/*"
+      configurable_clientside_auth_params: ["api_key", "api_base"]
+  - model_name: "openai/*"
+    litellm_params:
+      model: "openai/*"
+      configurable_clientside_auth_params: ["api_key", "api_base"]
+  - model_name: "bedrock/*"
+    litellm_params:
+      model: "bedrock/*"
+      configurable_clientside_auth_params: ["aws_access_key_id", "aws_secret_access_key", "aws_region_name", "aws_session_token"]
+  - model_name: "azure/*"
+    litellm_params:
+      model: "azure/*"
+      configurable_clientside_auth_params: ["api_key", "api_base", "api_version"]
+
+general_settings:
+  master_key: "sk-1234"                 # boundary auth to this engine ONLY (no provider keys stored)
+
+litellm_settings:
+  drop_params: true
+  turn_off_message_logging: true        # never persist prompt/response content or the injected key

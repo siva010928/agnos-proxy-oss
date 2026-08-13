@@ -1,0 +1,232 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Agnos Design System
+   Neutral surfaces (Stripe/Linear-grade) + brand accents.
+   Toggle: class="dark" | class="light" on <html>.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root, .dark {
+  color-scheme: dark;
+  /* Neutral dark surfaces - calm, not saturated. Brand color is an ACCENT only. */
+  --color-app: #0B0E14;
+  --color-surface: #131722;
+  --color-surface-2: #1A1F2E;
+  --color-elevated: #1E2435;
+  --color-border: rgba(255,255,255,0.07);
+  --color-border-strong: rgba(255,255,255,0.13);
+  /* Brand accent (coral/terracotta) - primary actions, active states */
+  --color-accent: #E8604C;
+  --color-accent-light: #F0826E;
+  --color-accent-soft: rgba(232,96,76,0.14);
+  /* Functional */
+  --color-ok: #22C55E;
+  --color-warn: #F5A524;
+  --color-danger: #F1617A;
+  --color-info: #2BB3C0;
+  --color-insight: #8B7DB8;
+  /* Text */
+  --color-text: #F0F2F5;
+  --color-text-secondary: #A8B2C0;
+  --color-text-muted: #6B7585;
+  --color-muted: #6B7585;
+  /* Code surface */
+  --color-code-bg: #0E1117;
+  --color-code-text: #C8D2DC;
+  /* Shadows */
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+  --shadow-card-hover: 0 6px 20px -8px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.light {
+  color-scheme: light;
+  /* Soft cool-slate canvas - premium, no pure-white glare; white cards float above it. */
+  --color-app: #F4F6F8;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #E4EAF1;
+  --color-elevated: #FFFFFF;
+  --color-border: rgba(17,24,39,0.14);
+  --color-border-strong: rgba(17,24,39,0.22);
+  /* Deep, intentional coral/terracotta - primary action */
+  --color-accent: #DF4B37;
+  --color-accent-light: #C23E2C;
+  --color-accent-soft: rgba(223,75,55,0.10);
+  /* Sage green success · warm amber warnings · tech-teal info */
+  --color-ok: #3F7A52;
+  --color-warn: #C2700A;
+  --color-danger: #C9304B;
+  --color-info: #115E72;
+  --color-insight: #5B4B86;
+  /* Charcoal text - never pure black */
+  --color-text: #111827;
+  --color-text-secondary: #374151;
+  --color-text-muted: #6B7280;
+  --color-muted: #6B7280;
+  --color-code-bg: #F4F6F9;
+  --color-code-text: #243240;
+  /* Cards get a defined 1px ring + soft shadow so they read as raised on the
+     soft canvas (fixes faint borders / floating chips). */
+  --shadow-card: 0 1px 2px rgba(17,24,39,0.07), 0 0 0 1px rgba(17,24,39,0.07);
+  --shadow-card-hover: 0 8px 20px -8px rgba(17,24,39,0.18), 0 0 0 1px rgba(17,24,39,0.09);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+/* Light mode: many buttons use Tailwind's `hover:text-white`, which on a button
+   whose hover background stays light (surface/transparent/app) renders white-on-
+   light - invisible. Remap hover:text-white to the primary (dark) text colour in
+   light mode. `.light` prefix gives higher specificity than Tailwind's rule, so
+   no !important needed; dark mode is unaffected. */
+.light .hover\:text-white:hover { color: var(--color-text); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 7px; height: 7px; }
+*::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 7px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--color-muted); }
+*::-webkit-scrollbar-track { background: transparent; }
+
+html { transition: background-color 0.25s ease; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--color-app);
+  color: var(--color-text-secondary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13.5px;
+  line-height: 1.6;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth theme cross-fade on surfaces + text */
+body, .card, aside, header, .input, .btn, .navlink, select, input, textarea {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease;
+}
+
+::selection { background: var(--color-accent-soft); color: var(--color-text); }
+
+h1 { color: var(--color-text); font-weight: 700; letter-spacing: -0.01em; }
+h2, h3 { color: var(--color-text); font-weight: 600; letter-spacing: -0.005em; }
+
+@layer components {
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    padding: 1.1rem;
+    box-shadow: var(--shadow-card);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-card-hover);
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium;
+    border: 1px solid var(--color-border);
+  }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  .input {
+    @apply w-full px-3 py-2 text-sm outline-none;
+    background: var(--color-app);
+    border: 1px solid var(--color-border);
+    border-radius: 9px;
+    color: var(--color-text);
+  }
+  .input::placeholder { color: var(--color-text-muted); }
+  .input:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+           transition-all disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn;
+    background: var(--color-accent);
+    color: #fff;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.12) inset;
+  }
+  .btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-ghost {
+    @apply btn;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+  .btn-ghost:hover { border-color: var(--color-border-strong); color: var(--color-text); }
+  .navlink {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] cursor-pointer;
+    color: var(--color-text-muted);
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+  .navlink:hover { color: var(--color-text); background: var(--color-surface-2); }
+  .navlink-active {
+    color: var(--color-text);
+    background: var(--color-accent-soft);
+    border-left: 2px solid var(--color-accent);
+    padding-left: calc(0.75rem - 2px);
+    font-weight: 500;
+  }
+  .th {
+    @apply text-left text-[11px] uppercase tracking-wider font-semibold px-3 py-2.5;
+    color: var(--color-text-secondary);
+    background: var(--color-surface-2);
+    border-bottom: 1px solid var(--color-border-strong);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  .td { @apply px-3 py-2.5 text-sm align-middle; color: var(--color-text-secondary); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COMPATIBILITY OVERRIDES - many components still use hardcoded Tailwind
+   color classes (text-white, text-gray-*, bg-surface...). Map them to the
+   active theme so both modes stay readable. !important beats inline styles
+   that have no !important (e.g. StatTile's style={{color}}).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Backgrounds → theme surfaces (both modes) */
+.text-white { color: var(--color-text); }
+.text-gray-100 { color: var(--color-text); }
+.text-gray-200 { color: var(--color-text-secondary); }
+.text-gray-300 { color: var(--color-text-secondary); }
+.text-gray-400 { color: var(--color-text-muted); }
+.text-muted { color: var(--color-text-muted); }
+.bg-app { background: var(--color-app); }
+.bg-surface { background: var(--color-surface); }
+.bg-elevated { background: var(--color-surface-2); }
+
+/* Light-mode: force numbers + mono dark (StatTile uses inline bright colors) */
+.light .tabular-nums { color: #0F1A24 !important; }
+.light .font-mono,
+.light .mono { color: #1A2733 !important; }
+.light pre, .light code { color: #243240; }
+.light option { background: #FFFFFF; color: #0F1A24; }
+/* Light-mode: keep status/semantic text legible on white */
+.light .text-green-300, .light .text-green-400 { color: #15803D !important; }
+.light .text-red-300, .light .text-red-400 { color: #BE123C !important; }
+.light .text-amber-300, .light .text-amber-400 { color: #B45309 !important; }
+.light .text-blue-300, .light .text-blue-400 { color: #1D4ED8 !important; }
+.light .text-violet-300, .light .text-violet-400 { color: #6D28D9 !important; }
+.light .text-orange-300, .light .text-orange-400 { color: #C2410C !important; }
+
+/* Cinematic 3D labels (drei <Html>) must never intercept pointer events - the
+   mouse has to fall through to the 3D hit-boxes behind them (hover-for-detail).
+   drei only applies its own pointerEvents prop in transform mode, so we force it
+   here on the wrapper; pointer-events inherits to all label descendants. */
+.cinema-lbl, .cinema-lbl * { pointer-events: none !important; }

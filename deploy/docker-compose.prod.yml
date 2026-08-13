@@ -1,0 +1,245 @@
+# Agnos Proxy - Production Stack (GCE single-VM deployment)
+# All services + Caddy auto-TLS reverse proxy.
+# Usage: docker compose -f deploy/docker-compose.prod.yml up -d
+
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: agnos-proxy-gateway
+    env_file: ../.env
+    environment:
+      GATEWAY_HOST: "0.0.0.0"
+      GATEWAY_PORT: "8090"
+      ENGINE: "bifrost"
+      BIFROST_URL: "http://bifrost:8080"
+      # Live engine slot (in-cluster service DNS) so the swappable engine works in
+      # the deployment, not just dev.
+      PORTKEY_URL: "http://portkey:8787"
+      LITELLM_ENGINE_URL: "http://litellm-engine:4000"
+      LITELLM_ENGINE_KEY: "sk-1234"
+      # Jaeger UI is served behind Caddy at /jaeger (QUERY_BASE_PATH=/jaeger), so the
+      # 'view trace in Jaeger' deep-link must be relative to the domain.
+      JAEGER_UI_URL: "/jaeger"
+      # Production admin password - injected from the DASHBOARD_ADMIN_PASSWORD
+      # GitHub secret via the deploy shell (see deploy.yml). Empty falls back to
+      # the dev default in config.py; never hardcode the real password here.
+      DASHBOARD_ADMIN_USER: "admin"
+      DASHBOARD_ADMIN_PASSWORD: "${DASHBOARD_ADMIN_PASSWORD:-}"
+      # Preview mode: /auth/preview issues a dashboard admin session with no
+      # password so the shared link shows the live dashboard (no sign-in wall). The
+      # real password above stays server-side. Set to "false" to require login.
+      PREVIEW_MODE: "true"
+      GOVERNANCE_DB_URL: "postgresql+asyncpg://agnos:agnos@postgres:5432/agnos_gateway"
+      REDIS_URL: "redis://redis:6379"
+      KAFKA_BROKERS: "kafka:9092"
+      KAFKA_TOPIC: "agnos-proxy.governance.v1"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+    ports:
+      - "8090:8090"
+    volumes:
+      # Optional large static media bind-mounted in, served by the gateway at /media/*
+      # without bloating the git repo or the Docker image. Drop files into <repo>/media
+      # on the host (the directory may be empty).
+      - ../media:/app/media:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      bifrost:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 45s
+      retries: 5
+
+  bifrost:
+    image: maximhq/bifrost:latest
+    container_name: agnos-proxy-bifrost
+    environment:
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8080"
+      LOG_LEVEL: "info"
+      LOG_STYLE: "json"
+    volumes:
+      - bifrost_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 10s
+      retries: 5
+
+  postgres:
+    image: postgres:16
+    container_name: agnos-proxy-postgres
+    environment:
+      POSTGRES_USER: agnos
+      POSTGRES_PASSWORD: agnos
+      POSTGRES_DB: agnos_gateway
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agnos -d agnos_gateway"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: agnos-proxy-redis
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: agnos-proxy-kafka
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/tmp/kraft-combined-logs
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: agnos-proxy-kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: agnos
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+      # Serve from /kafka-ui sub-path (behind Caddy reverse proxy)
+      SERVER_SERVLET_CONTEXT_PATH: /kafka-ui
+    depends_on: [kafka]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: agnos-proxy-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus'
+      - '--web.route-prefix=/'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ../infra/prometheus.prod.yml:/etc/prometheus/prometheus.yml:ro
+      - ../infra/rules.yml:/etc/prometheus/rules.yml:ro
+      - prom_data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: agnos-proxy-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: agnos
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+    volumes:
+      - ../infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    container_name: agnos-proxy-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      QUERY_BASE_PATH: "/jaeger"
+    restart: unless-stopped
+
+  # ── Commodity translator: Portkey OSS gateway (STATELESS) ── holds NO creds;
+  # the boundary injects the provider key per request. A safe-harbor engine to
+  # evacuate onto; required for the live engine slot.
+  portkey:
+    image: portkeyai/gateway:latest
+    container_name: agnos-proxy-portkey
+    restart: unless-stopped
+
+  # ── Commodity translator: LiteLLM proxy (STATEFUL) ── holds provider keys in
+  # its OWN Postgres, synced from our vault (the stateful-engine contrast).
+  litellm-engine-db:
+    image: postgres:16
+    container_name: agnos-proxy-litellm-engine-db
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+      POSTGRES_DB: litellm
+    volumes:
+      - litellm_engine_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  litellm-engine:
+    build:
+      context: ../infra/litellm-engine
+      dockerfile: Dockerfile
+    image: agnos-proxy-litellm-engine:local
+    container_name: agnos-proxy-litellm-engine
+    depends_on:
+      litellm-engine-db:
+        condition: service_healthy
+    environment:
+      LITELLM_MASTER_KEY: "sk-1234"
+      DATABASE_URL: "postgresql://litellm:litellm@litellm-engine-db:5432/litellm"
+    volumes:
+      - ../infra/litellm-engine/config.yaml:/app/config.yaml:ro
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: agnos-proxy-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: "${DOMAIN:-localhost}"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  bifrost_data:
+  pg_data:
+  redis_data:
+  kafka_data:
+  prom_data:
+  grafana_data:
+  caddy_data:
+  caddy_config:
+  litellm_engine_pg:

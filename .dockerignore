@@ -1,0 +1,23 @@
+# Ignore things not needed in Docker image
+.venv/
+.venv-crewai/
+.git/
+.gitignore
+.idea/
+.env
+.env.local
+__pycache__/
+*.pyc
+node_modules/
+frontend/dist/
+frontend/e2e/
+test-results/
+playwright-report/
+tests/
+bench/
+docs/
+data/bifrost/
+*.db
+*.log
+.DS_Store
+.pytest_cache/
