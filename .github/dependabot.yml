@@ -1,42 +1,47 @@
 version: 2
+# Low-noise policy: updates are GROUPED (one PR per ecosystem), SCHEDULED (weekly for
+# app deps, monthly for infra), and MAJORS are held for manual review. This opens at
+# most a couple of curated PRs - never a daily stream.
 updates:
-  # Python (Poetry) - pyproject.toml + poetry.lock at the repo root.
+  # Python (Poetry) - one grouped weekly PR of in-range minor/patch bumps.
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+      day: "monday"
+    open-pull-requests-limit: 3
     groups:
-      python-minor-patch:
+      python:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
     ignore:
-      # The OpenAI SDK's major versions change request/response types the translator
-      # depends on - review and bump these manually, not automatically.
+      # The OpenAI SDK's majors change types the translator depends on - bump manually.
       - dependency-name: "openai"
         update-types: ["version-update:semver-major"]
 
-  # Dashboard (npm) under /frontend.
+  # Dashboard (npm) - one grouped weekly PR of in-range minor/patch bumps.
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+      day: "monday"
+    open-pull-requests-limit: 3
     groups:
-      npm-minor-patch:
+      frontend:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
     ignore:
-      # UI / tooling majors (React, react-router, recharts, three / @react-three,
-      # vite, typescript) are breaking changes - handle in dedicated PRs, not autobumps.
+      # UI/tooling majors (React, react-router, recharts, three, vite, typescript) are
+      # breaking - handle in dedicated PRs, not autobumps.
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
-  # Base images: keep the chosen line (Node 20 LTS, Python 3.12) and take patch/security
-  # only - a jump to Node 26 / Python 3.14 can break the build and is a deliberate choice.
+  # Base images - patch/security only (keep Node 20 LTS / Python 3.12), monthly.
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 2
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
@@ -44,18 +49,18 @@ updates:
   - package-ecosystem: "docker"
     directory: "/infra/litellm-engine"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 2
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
-  # GitHub Actions used by the workflows.
+  # GitHub Actions - one grouped monthly PR.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 2
     groups:
       actions:
-        update-types: ["minor", "patch"]
+        patterns: ["*"]
