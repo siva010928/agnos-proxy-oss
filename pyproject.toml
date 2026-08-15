@@ -11,35 +11,35 @@ packages = [{ include = "gateway" }]
 python = "^3.12"
 
 # Web framework
-fastapi = "^0.115.0"
-uvicorn = { extras = ["standard"], version = "^0.32.0" }
+fastapi = ">=0.115,<0.142"
+uvicorn = { extras = ["standard"], version = ">=0.32,<0.53" }
 
 # OpenAI SDK - request validation + response/chunk Pydantic types
 openai = "^1.55.0"
 
 # Persistence: Postgres (default) + SQLite (fallback)
 sqlalchemy = { extras = ["asyncio"], version = "^2.0.0" } # 2.0.1
-asyncpg = "^0.30.0"
-aiosqlite = "^0.20.0"
+asyncpg = ">=0.30,<0.32"
+aiosqlite = ">=0.20,<0.23"
 greenlet = "^3.1.0"
 
 # Encryption (envelope encryption for workspace creds)
 cryptography = "^44.0.0"
 
 # Token counting (estimate; chunker / TPM)
-tiktoken = "^0.12.0"
+tiktoken = ">=0.12,<0.14"
 
 # CEL rules for guardrails
-cel-python = "^0.1.5"
+cel-python = ">=0.1.5,<0.6.0"
 
 # Structured logging
 structlog = "^24.4.0"
 
 # Kafka governance observer (optional at runtime)
-aiokafka = "^0.12.0"
+aiokafka = ">=0.12,<0.15"
 
 # Prometheus metrics observer (optional)
-prometheus-client = "^0.21.0"
+prometheus-client = ">=0.21,<0.27"
 
 # HTTP client (BifrostEngine + demos)
 httpx = "^0.28.0"
