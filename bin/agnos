@@ -1,0 +1,178 @@
+#!/bin/sh
+# agnos - tiny CLI wrapper around the Agnos Proxy quickstart stack.
+#
+# A thin, low-maintenance shim over `docker compose` for the prebuilt-image quickstart
+# in the current directory. Run it from your install dir (the one holding
+# docker-compose.yml + .env) or from a repo clone (uses deploy/docker-compose.quickstart.yml).
+#
+#   agnos up               start the stack (pull the published image)
+#   agnos down             stop the stack
+#   agnos logs [service]   follow logs (all services, or one, e.g. gateway)
+#   agnos status           compose ps + gateway /health
+#   agnos update           pull the latest image and restart
+#   agnos config           open .env in $EDITOR
+#   agnos open             open the dashboard in your browser
+#   agnos version          print the gateway + CLI version
+#   agnos help             show this help
+set -eu
+
+CLI_VERSION="0.2.0"
+
+# ── output helpers ────────────────────────────────────────────────────────────
+die() { printf 'agnos: %s\n' "$1" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+agnos - manage the Agnos Proxy quickstart stack
+
+Usage: agnos <command> [args]
+
+Commands:
+  up               Start the stack (docker compose up -d, pulling the image)
+  down             Stop the stack (docker compose down)
+  logs [service]   Follow logs for all services, or one (e.g. agnos logs gateway)
+  status           Show container status + gateway /health
+  update           Pull the latest image and restart
+  config           Open .env in $EDITOR
+  open             Open the dashboard in the default browser
+  version          Print the gateway version (from /health) + this CLI's version
+  help             Show this help
+
+Run it from your install directory (docker-compose.yml + .env) or a repo clone.
+Docs: https://github.com/siva010928/agnos-proxy-oss/blob/main/docs/INSTALL.md
+EOF
+}
+
+# ── resolve the docker compose command (v2 plugin preferred) ──────────────────
+resolve_dc() {
+  if [ -n "${DC:-}" ]; then return 0; fi
+  command -v docker >/dev/null 2>&1 || die "docker not found. See docs/INSTALL.md"
+  if docker compose version >/dev/null 2>&1; then
+    DC="docker compose"
+  elif command -v docker-compose >/dev/null 2>&1; then
+    DC="docker-compose"
+  else
+    die "Docker Compose not found. Install the Compose v2 plugin. See docs/INSTALL.md"
+  fi
+}
+
+# ── resolve the compose file + its co-located .env ────────────────────────────
+# Prefer ./docker-compose.yml (installer layout); fall back to the in-repo
+# deploy/docker-compose.quickstart.yml so it also works from a clone. The .env
+# lives next to the compose file (that is where compose resolves env_file: .env).
+resolve_compose() {
+  if [ -n "${COMPOSE_FILE:-}" ]; then return 0; fi
+  if [ -f docker-compose.yml ]; then
+    COMPOSE_FILE="docker-compose.yml"
+  elif [ -f deploy/docker-compose.quickstart.yml ]; then
+    COMPOSE_FILE="deploy/docker-compose.quickstart.yml"
+  else
+    die "no compose file here. Run the installer first (docs/INSTALL.md) or cd to your install dir."
+  fi
+  ENV_FILE="$(dirname "$COMPOSE_FILE")/.env"
+}
+
+# ── best-effort dashboard port (does not require a compose file) ───────────────
+resolve_port() {
+  if [ -n "${PORT:-}" ]; then return 0; fi
+  ef=""
+  for cand in "${ENV_FILE:-}" ".env" "deploy/.env"; do
+    [ -n "$cand" ] && [ -f "$cand" ] && { ef="$cand"; break; }
+  done
+  PORT=""
+  if [ -n "$ef" ]; then
+    PORT="$(grep -E '^GATEWAY_PORT=' "$ef" 2>/dev/null | cut -d= -f2- | tr -d '[:space:]' || true)"
+  fi
+  [ -n "$PORT" ] || PORT=8090
+}
+
+# ── subcommands ───────────────────────────────────────────────────────────────
+cmd_up() {
+  resolve_dc; resolve_compose
+  $DC -f "$COMPOSE_FILE" up -d --pull always
+  resolve_port
+  printf 'agnos: stack started. Dashboard: http://localhost:%s/\n' "$PORT"
+}
+
+cmd_down() {
+  resolve_dc; resolve_compose
+  $DC -f "$COMPOSE_FILE" down
+}
+
+cmd_logs() {
+  resolve_dc; resolve_compose
+  # Optional single service name passed through (e.g. gateway, postgres, redis).
+  if [ "$#" -gt 0 ]; then
+    $DC -f "$COMPOSE_FILE" logs -f "$@"
+  else
+    $DC -f "$COMPOSE_FILE" logs -f
+  fi
+}
+
+cmd_status() {
+  resolve_dc; resolve_compose; resolve_port
+  $DC -f "$COMPOSE_FILE" ps
+  printf '\nHealth (http://localhost:%s/health):\n' "$PORT"
+  if curl -fsS --max-time 3 "http://localhost:$PORT/health" 2>/dev/null; then
+    printf '\n'
+  else
+    printf '  unreachable - is the stack up? (agnos up)\n'
+  fi
+}
+
+cmd_update() {
+  resolve_dc; resolve_compose
+  $DC -f "$COMPOSE_FILE" pull
+  $DC -f "$COMPOSE_FILE" up -d
+  printf 'agnos: updated to the latest image.\n'
+}
+
+cmd_config() {
+  resolve_compose
+  [ -f "$ENV_FILE" ] || die "no .env next to $COMPOSE_FILE. Run the installer first (docs/INSTALL.md)."
+  editor="${EDITOR:-}"
+  if [ -z "$editor" ]; then
+    if command -v nano >/dev/null 2>&1; then editor="nano"; else editor="vi"; fi
+  fi
+  exec "$editor" "$ENV_FILE"
+}
+
+cmd_open() {
+  resolve_port
+  url="http://localhost:$PORT/"
+  if command -v open >/dev/null 2>&1; then
+    open "$url"                     # macOS
+  elif command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url"                 # Linux
+  else
+    printf 'Open this in your browser: %s\n' "$url"
+  fi
+}
+
+cmd_version() {
+  resolve_port
+  gw="$(curl -fsS --max-time 3 "http://localhost:$PORT/health" 2>/dev/null \
+        | sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)"
+  if [ -n "$gw" ]; then
+    printf 'gateway: %s\n' "$gw"
+  else
+    printf 'gateway: unreachable (start it with: agnos up)\n'
+  fi
+  printf 'agnos CLI: %s\n' "$CLI_VERSION"
+}
+
+# ── dispatch ──────────────────────────────────────────────────────────────────
+cmd="${1:-help}"
+[ "$#" -gt 0 ] && shift || true
+case "$cmd" in
+  up)             cmd_up ;;
+  down)           cmd_down ;;
+  logs)           cmd_logs "$@" ;;
+  status|ps)      cmd_status ;;
+  update|upgrade) cmd_update ;;
+  config|env)     cmd_config ;;
+  open)           cmd_open ;;
+  version)        cmd_version ;;
+  help|-h|--help) usage ;;
+  *)              printf 'agnos: unknown command "%s"\n\n' "$cmd" >&2; usage; exit 1 ;;
+esac

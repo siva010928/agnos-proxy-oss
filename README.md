@@ -35,6 +35,7 @@ prototype playground (no sign-up, no keys, deterministic responses).
 - [Architecture](#architecture-hexagonal--ports-and-adapters)
 - [Engines](#engines--pick-the-best-per-provider-swap-at-runtime)
 - [Features](#features)
+- [Install](#install)
 - [Quickstart](#quickstart-self-host-everything-real)
 - [Calling the gateway](#calling-the-gateway)
 - [Request / response headers](#request--response-headers)
@@ -206,6 +207,21 @@ configure each engine, per-provider routing, gradual insourcing, and a step-by-s
 - Cost attribution per client/workspace/user/component; one governance event per call.
 - OpenTelemetry traces (Jaeger), Prometheus metrics, optional Kafka event bus, live SSE dashboard.
 - Low control-plane overhead (~1 ms median); 170+ tests runnable at **$0** on a deterministic echo engine.
+
+## Install
+
+Fastest paths to a running gateway - full guide in **[docs/INSTALL.md](docs/INSTALL.md)**.
+
+| Path | Command | Best for |
+|---|---|---|
+| **One-liner** | `curl -fsSL https://raw.githubusercontent.com/siva010928/agnos-proxy-oss/main/install.sh \| sh` | Secure install - secrets auto-generated, keyless `echo` engine, no keys needed |
+| **Prebuilt image** | `docker pull ghcr.io/siva010928/agnos-proxy:latest` | Pull the published image (pin `:v0.2.0` for a release) |
+| **Compose (no build)** | `docker compose -f deploy/docker-compose.quickstart.yml up -d` | Gateway + Postgres + Redis from the prebuilt image (create `.env` first) |
+
+The one-liner generates strong secrets, runs the keyless `echo` engine (no provider keys),
+waits for health, then prints your dashboard URL + admin login. See
+**[docs/INSTALL.md](docs/INSTALL.md)** for the `agnos` CLI, a single `docker run`, from-source,
+and configuration.
 
 ## Quickstart (self-host, everything real)
 

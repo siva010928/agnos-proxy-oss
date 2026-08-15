@@ -1,0 +1,90 @@
+# Agnos Proxy - Quickstart Stack (prebuilt image, NO build)
+#
+# The no-build, self-host path: pulls the published multi-arch gateway image from
+# GHCR instead of building from source, plus a Postgres governance store and Redis.
+# This is the smallest real stack that boots the control plane + dashboard.
+#
+#   1. Create a .env next to this file (the installer does this for you):
+#        GATEWAY_MASTER_KEY   any passphrase (generate a strong one - see docs/INSTALL.md)
+#        PLATFORM_ADMIN_TOKEN / SESSION_SECRET / DASHBOARD_ADMIN_PASSWORD   strong secrets
+#        (required when PREVIEW_MODE=false, which is the default here)
+#   2. Bring it up:
+#        docker compose -f deploy/docker-compose.quickstart.yml up -d --pull always
+#   3. Open the dashboard at http://localhost:${GATEWAY_PORT:-8090}/
+#
+# Pin the image with AGNOS_VERSION (e.g. AGNOS_VERSION=v0.2.0); defaults to :latest.
+# Switch engines with ENGINE (echo = keyless $0 look-around, direct = in-process, no
+# sidecar). The provider sidecars (bifrost / litellm / portkey) are OPTIONAL and are
+# NOT part of this quickstart - add them only if you want that translator; see
+# docs/ENGINES.md for how each engine is configured and swapped.
+#
+# Secrets are NEVER hardcoded here - they are read from .env (env_file below).
+
+name: agnos-proxy
+
+services:
+  gateway:
+    image: ghcr.io/siva010928/agnos-proxy:${AGNOS_VERSION:-latest}
+    container_name: agnos-proxy-gateway
+    # Everything else (secrets, provider keys, WS_KEY_*, OTEL, ...) comes from .env.
+    env_file:
+      - .env
+    environment:
+      # Pin the in-container bind so the host port (below) can be remapped freely
+      # via GATEWAY_PORT without the container's listener drifting off :8090.
+      GATEWAY_HOST: "0.0.0.0"
+      GATEWAY_PORT: "8090"
+      # Translation engine. Default `direct` = in-process adapters, zero sidecar.
+      # Set ENGINE=echo in .env for a keyless $0 look-around (no provider keys).
+      ENGINE: "${ENGINE:-direct}"
+      # Point the gateway at the bundled Postgres + Redis (service DNS names).
+      GOVERNANCE_DB_URL: "postgresql+asyncpg://agnos:agnos@postgres:5432/agnos_gateway"
+      REDIS_URL: "redis://redis:6379"
+      # Default to a login-protected deployment. With PREVIEW_MODE=false the gateway
+      # refuses to boot on shipped-default secrets, so .env must carry real ones.
+      PREVIEW_MODE: "${PREVIEW_MODE:-false}"
+      # Required in every mode; compose fails fast with this message if it is unset.
+      GATEWAY_MASTER_KEY: "${GATEWAY_MASTER_KEY:?set GATEWAY_MASTER_KEY in .env}"
+    ports:
+      - "${GATEWAY_PORT:-8090}:8090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 45s
+      retries: 5
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: agnos-proxy-postgres
+    environment:
+      POSTGRES_USER: agnos
+      POSTGRES_PASSWORD: agnos
+      POSTGRES_DB: agnos_gateway
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agnos -d agnos_gateway"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: agnos-proxy-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  pg_data:
