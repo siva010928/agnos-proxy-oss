@@ -1,6 +1,6 @@
 # Agnos Proxy - Production Image
 # Multi-stage: build frontend + install Python deps, then slim runtime
-FROM node:20-slim AS frontend-build
+FROM node:26-slim AS frontend-build
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit
