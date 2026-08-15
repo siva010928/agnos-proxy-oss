@@ -218,6 +218,12 @@ docker compose up -d          # gateway + postgres + redis + kafka + bifrost + o
 
 Open the dashboard at **http://localhost:8090/** (in `PREVIEW_MODE` it opens without a login wall).
 
+**Prefer a prebuilt image?** Pull the published multi-arch gateway from GHCR:
+
+```bash
+docker pull ghcr.io/siva010928/agnos-proxy:latest   # or a pinned release, e.g. :v0.2.0
+```
+
 Generate a master key for the vault:
 
 ```bash
