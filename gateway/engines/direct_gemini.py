@@ -220,7 +220,7 @@ async def gemini_embeddings(openai_request: dict, target: ResolvedTarget) -> Eng
     texts = [inp] if isinstance(inp, str) else [str(x) for x in (inp or [])]
     dims = openai_request.get("dimensions")
     mp = _model_path(model)
-    req = {"requests": [{"model": mp, "content": {"parts": [{"text": t}]}} for t in texts]}
+    req: dict[str, list[dict[str, Any]]] = {"requests": [{"model": mp, "content": {"parts": [{"text": t}]}} for t in texts]}
     if dims and dc.supports_dimensions(model):
         for r0 in req["requests"]:
             r0["outputDimensionality"] = int(dims)

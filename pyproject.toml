@@ -1,10 +1,17 @@
-[tool.poetry]
+[project]
 name = "agnos-proxy-llm-gateway"
 version = "0.2.0"
 description = "Agnos Proxy - the gateway-agnostic control plane for LLM routing, cost-tracking and observability. OpenAI-compatible governance proxy over a swappable BackendEngine."
-authors = ["Agnos Proxy Contributors"]
+authors = [{ name = "Agnos Proxy Contributors" }]
 license = "MIT"
 readme = "README.md"
+requires-python = ">=3.12,<4.0"
+# Runtime dependency SPECIFIERS stay in [tool.poetry.dependencies] (below) and are
+# surfaced to PEP 621 via `dynamic`. This keeps the exact resolved set + poetry.lock
+# unchanged while clearing the Poetry 2.x deprecation warnings for the metadata above.
+dynamic = ["dependencies"]
+
+[tool.poetry]
 packages = [{ include = "gateway" }]
 
 [tool.poetry.dependencies]
@@ -128,9 +135,18 @@ ignore = [
 "demo/**" = ["E402", "F401", "B", "E501"]
 
 [tool.mypy]
-# Local convenience only - mypy is intentionally NOT a CI gate. Kept lenient so it
-# is useful for spot-checking without blocking on the existing untyped surface.
+# mypy is a SCOPED CI gate (see the `types` job in .github/workflows/ci.yml). The
+# gate type-checks ONLY the packages that are already clean:
+#     gateway/secrets gateway/bifrost gateway/governance gateway/db gateway/engines
+# The rest of the tree - notably gateway/core.* and gateway/routes.* - is still on
+# the untyped/in-progress surface and is EXCLUDED from the gate pending incremental
+# typing. `follow_imports = "silent"` lets those out-of-scope modules be analyzed for
+# the type info the in-scope code needs WITHOUT reporting their own errors, so a type
+# error in core/routes never fails this gate. Widen the scope (and relax nothing else)
+# as core/routes get annotated. `ignore_missing_imports` keeps optional/native-stub-less
+# third-party libs from tripping the gate (matches the additive Ruff approach).
 python_version = "3.12"
 ignore_missing_imports = true
 warn_unused_ignores = false
 check_untyped_defs = false
+follow_imports = "silent"

@@ -385,7 +385,7 @@ export function Keys() {
         identifier={rotateRow ? `prefix ${rotateRow.prefix} · roles [${rotateRow.roles.join(', ')}]` : null}
         confirmLabel="Rotate key"
         danger
-        onConfirm={() => rotateRow && doRotate(rotateRow)}
+        onConfirm={() => rotateRow ? doRotate(rotateRow) : undefined}
         testId="confirm-rotate"
       />
 
@@ -401,7 +401,7 @@ export function Keys() {
         identifier={disableRow ? `prefix ${disableRow.prefix} · roles [${disableRow.roles.join(', ')}]` : null}
         confirmLabel="Disable key"
         danger
-        onConfirm={() => disableRow && doDisable(disableRow)}
+        onConfirm={() => disableRow ? doDisable(disableRow) : undefined}
         testId="confirm-disable"
       />
     </div>

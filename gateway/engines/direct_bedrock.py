@@ -312,13 +312,13 @@ async def bedrock_embeddings(openai_request: dict, target: ResolvedTarget) -> En
         vectors: list[list[float]] = []
         total_tokens = 0
         if is_cohere:
-            payload = {"texts": texts, "input_type": "search_document"}
+            payload: dict[str, Any] = {"texts": texts, "input_type": "search_document"}
             resp = client.invoke_model(modelId=model, body=json.dumps(payload))
             data = json.loads(resp["body"].read())
             vectors = data.get("embeddings", [])
         else:  # Amazon Titan - one text per invoke
             for t in texts:
-                payload: dict[str, Any] = {"inputText": t}
+                payload = {"inputText": t}
                 if dims and dc.supports_dimensions(model):
                     payload["dimensions"] = int(dims)
                     payload["normalize"] = True

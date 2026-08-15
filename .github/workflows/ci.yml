@@ -60,10 +60,21 @@ jobs:
           node-version: "20"
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      - name: Build dashboard
+      - name: Install deps
         run: |
           cd frontend
           npm ci --no-audit --no-fund
+      - name: Typecheck (tsc --noEmit, strict)
+        run: |
+          cd frontend
+          npm run typecheck
+      - name: Lint (eslint)
+        run: |
+          cd frontend
+          npm run lint
+      - name: Build dashboard
+        run: |
+          cd frontend
           npm run build
 
   lint:
@@ -82,3 +93,101 @@ jobs:
           poetry install --with dev --without demo --no-interaction
       - name: Ruff check
         run: poetry run ruff check .
+
+  # Additive, NON-REQUIRED gate. Scoped mypy over the typed-clean packages only
+  # (secrets/bifrost/governance/db/engines). core.* and routes.* are excluded via
+  # follow_imports="silent" in [tool.mypy] pending incremental typing - see pyproject.toml.
+  types:
+    name: Types (mypy, scoped)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: poetry.lock
+      - name: Install (dev tooling)
+        run: |
+          pipx install poetry || pip install poetry
+          poetry install --with dev --without demo --no-interaction
+      - name: Mypy (scoped)
+        run: poetry run mypy gateway/secrets gateway/bifrost gateway/governance gateway/db gateway/engines
+
+  # Additive, NON-REQUIRED gate. End-to-end BVT: boot the real gateway against a
+  # real Postgres with the $0 `echo` engine, wait for /health, then run the
+  # integration suite over real HTTP (tests/integration hit http://localhost:8090).
+  #
+  # Seeding: the cold-start lifespan calls gateway/db/seed.py::seed(), which
+  # provisions the `novatech` client the integration conftest needs (its
+  # fresh_workspace fixture attaches new workspaces to client_id="novatech"). A
+  # fresh CI Postgres is empty, so seed() fires automatically - no extra seed step.
+  #
+  # PREVIEW_MODE=true so validate_config() accepts the shipped-default secrets
+  # (PLATFORM_ADMIN_TOKEN/SESSION_SECRET/DASHBOARD_ADMIN_PASSWORD); with
+  # PREVIEW_MODE=false the gateway refuses to boot on those defaults (see
+  # gateway/app.py::validate_config). GATEWAY_MASTER_KEY is required in all modes.
+  integration:
+    name: Integration BVT (ENGINE=echo, $0)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: agnos
+          POSTGRES_PASSWORD: agnos
+          POSTGRES_DB: agnos_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agnos -d agnos_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      ENGINE: echo
+      PREVIEW_MODE: "true"
+      GATEWAY_MASTER_KEY: ci-test-key
+      PLATFORM_ADMIN_TOKEN: platform-admin-secret
+      GOVERNANCE_DB_URL: postgresql+asyncpg://agnos:agnos@localhost:5432/agnos_test
+      KAFKA_BROKERS: ""
+      REDIS_URL: ""
+      GATEWAY_PORT: "8090"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+          cache-dependency-path: poetry.lock
+      - name: Install (main + dev)
+        run: |
+          pipx install poetry || pip install poetry
+          poetry install --with dev --without demo --no-interaction
+      - name: Boot gateway (background) + wait for /health
+        run: |
+          # nohup + & so the gateway survives this step's shell and stays up for the
+          # test step. Its stdout/stderr go to gateway.log for the tail-on-failure step.
+          nohup poetry run python gateway_server.py > gateway.log 2>&1 &
+          echo $! > gateway.pid
+          echo "waiting up to 60s for gateway /health on :8090 ..."
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8090/health > /dev/null 2>&1; then
+              echo "gateway healthy after ${i}s"
+              curl -fsS http://localhost:8090/health; echo
+              exit 0
+            fi
+            # Fail fast (don't burn the full 60s) if the process already died.
+            if ! kill -0 "$(cat gateway.pid)" 2>/dev/null; then
+              echo "::error::gateway process exited during startup"
+              echo "----- gateway.log (tail) -----"; tail -n 200 gateway.log
+              exit 1
+            fi
+            sleep 1
+          done
+          # Health never came up: FAIL the job (so the suite can't vacuously skip).
+          echo "::error::gateway did not become healthy within 60s"
+          echo "----- gateway.log (tail) -----"; tail -n 200 gateway.log
+          exit 1
+      - name: Integration tests (-m integration, echo upstream)
+        run: poetry run pytest -m integration -q
+      - name: Gateway log tail
+        if: always()
+        run: tail -n 200 gateway.log || true

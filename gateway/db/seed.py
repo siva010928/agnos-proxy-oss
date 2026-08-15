@@ -31,6 +31,7 @@ is empty.
 from __future__ import annotations
 
 import hashlib
+from typing import Any
 
 from sqlalchemy import delete, select
 
@@ -206,7 +207,7 @@ async def reseed_to_wave19_model() -> dict:
     """Idempotent migration: ensure the DB matches the WAVE 19 Client \u2192 Workspace
     model. Wipes legacy workspaces (anything not in WORKSPACES.keys()) along
     with their child rows, then upserts the NovaTech tenancy.  Returns a summary."""
-    summary = {"client": ACME_CLIENT_ID, "wiped_workspaces": 0,
+    summary: dict[str, Any] = {"client": ACME_CLIENT_ID, "wiped_workspaces": 0,
                "seeded_workspaces": 0, "kept_workspaces": 0}
     c = cipher()
     async with async_session() as s:
