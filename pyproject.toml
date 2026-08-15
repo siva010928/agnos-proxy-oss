@@ -24,7 +24,7 @@ aiosqlite = "^0.20.0"
 greenlet = "^3.1.0"
 
 # Encryption (envelope encryption for workspace creds)
-cryptography = "^44.0.0"
+cryptography = ">=44,<51"
 
 # Token counting (estimate; chunker / TPM)
 tiktoken = "^0.12.0"
