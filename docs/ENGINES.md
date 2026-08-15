@@ -67,6 +67,36 @@ PORTKEY_URL=http://localhost:8787
 # direct + echo are in-process - no URL needed
 ```
 
+### Engine versions & how to change them
+
+The sidecar engines run as containers; their versions are **pinned via env vars** (or a
+build arg for LiteLLM) so you control exactly what runs and can upgrade an engine
+independently of Agnos Proxy. Defaults live in [`.env.example`](../.env.example).
+
+| Engine | Version knob | Default | Upstream |
+|---|---|---|---|
+| **bifrost** | `BIFROST_VERSION` (image tag) | `latest` | [maximhq/bifrost](https://github.com/maximhq/bifrost) |
+| **portkey** | `PORTKEY_VERSION` (image tag) | `latest` | [Portkey-AI/gateway](https://github.com/portkey-ai/gateway) |
+| **litellm** | `LITELLM_VERSION` (Docker build arg) | `1.83.14` | [BerriAI/litellm](https://github.com/BerriAI/litellm) |
+| **direct / echo** | in-process (this repo's version) | - | - |
+
+```bash
+# Pin/upgrade a sidecar image (set the tag in .env, then re-up):
+BIFROST_VERSION=<release-tag>      # see the upstream releases page
+PORTKEY_VERSION=<release-tag>
+docker compose up -d bifrost portkey
+
+# The LiteLLM engine version is a Docker build arg (it is pip-installed into the image):
+docker compose build --build-arg LITELLM_VERSION=1.83.14 litellm-engine
+docker compose up -d litellm-engine
+```
+
+> **Pin a specific release in production** (not `latest`) for reproducible builds. The LiteLLM
+> engine default tracks the security-fixed stable (`>= 1.83.14`, past CVE-2026-42208 / the
+> 2026 privesc+RCE chain); bump `LITELLM_VERSION` to adopt a newer release after reviewing its
+> changelog. Keeping the translation engine patched is an operator responsibility - see
+> [docs/THREAT_MODEL.md](THREAT_MODEL.md).
+
 Provider credentials themselves live **only** in the encrypted vault (seeded from
 `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `AWS_*`, … on first boot, then encrypted with
 `GATEWAY_MASTER_KEY`). Engines never read them from env at request time - the control

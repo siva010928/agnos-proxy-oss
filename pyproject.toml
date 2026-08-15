@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "agnos-proxy-llm-gateway"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agnos Proxy - the gateway-agnostic control plane for LLM routing, cost-tracking and observability. OpenAI-compatible governance proxy over a swappable BackendEngine."
 authors = ["Agnos Proxy Contributors"]
 license = "MIT"
@@ -64,7 +64,10 @@ langgraph = "^1.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
 pytest-asyncio = "^0.24.0"
+pytest-cov = "^6.0.0"
 psutil = "^7.2.2"
+ruff = "^0.16.0"
+mypy = "^1.13.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -78,3 +81,56 @@ markers = [
     "live: opt-in smoke tests that hit a running gateway + real providers (run with -m live)",
     "integration: BVT \u2014 end-to-end tests against a running gateway with ENGINE=echo ($0 upstream)",
 ]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+# Meaningful, real rule families: pycodestyle errors (E), Pyflakes (F),
+# import sorting (I), flake8-bugbear (B) and pyupgrade (UP).
+select = ["E", "F", "I", "B", "UP"]
+# This package predates linting. To adopt Ruff additively (no mass reformat and
+# without rewriting files that are being changed elsewhere), the specific codes
+# already tripped by existing sources are grandfathered here. Every other rule in
+# the E/F/I/B/UP families stays active for new code. These can be removed one at a
+# time in dedicated cleanup PRs.
+ignore = [
+    "E401",  # multiple imports on one line
+    "E402",  # module import not at top of file
+    "E501",  # line too long (soft limit; some legacy lines exceed line-length)
+    "E701",  # multiple statements on one line (colon)
+    "E702",  # multiple statements on one line (semicolon)
+    "E741",  # ambiguous variable name
+    "F401",  # unused import (import hygiene; incremental cleanup)
+    "F541",  # f-string without any placeholders
+    "F601",  # use of == with repeated dict key literal
+    "F821",  # undefined name (pre-existing; revisit during cleanup)
+    "F841",  # local variable assigned but never used
+    "I001",  # unsorted imports (import ordering; incremental cleanup)
+    "B007",  # loop control variable not used within the loop body
+    "B008",  # function call in default argument
+    "B023",  # function definition uses loop variable
+    "B027",  # empty method in abstract base class without abstract decorator
+    "B904",  # raise without from inside except
+    "B905",  # zip() without explicit strict=
+    "UP017", # datetime.timezone.utc alias
+    "UP032", # use f-string instead of format call
+    "UP035", # deprecated import
+    "UP037", # remove quotes from type annotation
+    "UP041", # timeout error alias
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests and demos intentionally use relaxed style (top-level side effects,
+# unused imports for fixtures/illustration, long inline strings, bugbear patterns).
+"tests/**" = ["E402", "F401", "B", "E501"]
+"demo/**" = ["E402", "F401", "B", "E501"]
+
+[tool.mypy]
+# Local convenience only - mypy is intentionally NOT a CI gate. Kept lenient so it
+# is useful for spot-checking without blocking on the existing untyped surface.
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = false

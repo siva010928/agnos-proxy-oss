@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, Response
 
+from gateway import __version__
 from gateway.config import settings
 from gateway.core import metrics as M
 from gateway.db.database import async_session
@@ -25,7 +26,7 @@ async def _db_ok() -> bool:
 @router.get("/health")
 async def health():
     return {"status": "ok", "service": "agnos-proxy-llm-gateway",
-            "playground": settings.playground_mode}
+            "version": __version__, "playground": settings.playground_mode}
 
 
 @router.get("/health/ready")

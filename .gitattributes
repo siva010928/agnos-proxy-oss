@@ -1,0 +1,7 @@
+# Normalize line endings across platforms.
+* text=auto eol=lf
+
+# Generated / vendored assets: keep them out of language stats and diffs.
+data/model_prices.json linguist-generated=true linguist-vendored=true
+frontend/package-lock.json linguist-generated=true
+poetry.lock linguist-generated=true

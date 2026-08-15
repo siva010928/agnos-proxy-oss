@@ -1,0 +1,10 @@
+# Default owner for everything in the repo.
+* @siva010928
+
+# Security- and control-plane-sensitive areas (explicit review).
+/gateway/core/ @siva010928
+/gateway/routes/auth.py @siva010928
+/gateway/secrets/ @siva010928
+/.github/ @siva010928
+/deploy/ @siva010928
+/infra/ @siva010928

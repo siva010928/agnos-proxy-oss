@@ -3,6 +3,9 @@
 Agnos Proxy is a security tool - the control plane holds your keys and governs every
 call. We take vulnerabilities seriously and appreciate responsible disclosure.
 
+See [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) for the assets, trust boundaries, and
+attacker model this project is designed against.
+
 ## Reporting a vulnerability
 
 **Do not open a public issue, PR, or discussion for a security problem.**
@@ -44,5 +47,10 @@ Out of scope:
 
 ## Supported versions
 
-This project is pre-1.0; security fixes land on `main`. Pin a commit/tag and watch
-releases for updates.
+This project is pre-1.0: security fixes land on `main` and in the latest release. Pin a
+release tag and watch the repository for updates.
+
+| Version | Supported |
+|---|---|
+| latest `0.x` release + `main` | ✅ |
+| older `0.x` releases | ❌ (upgrade to the latest) |

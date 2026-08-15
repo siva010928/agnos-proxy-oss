@@ -4,7 +4,7 @@
 
 services:
   bifrost:
-    image: maximhq/bifrost:latest
+    image: maximhq/bifrost:${BIFROST_VERSION:-latest}
     container_name: agnos-proxy-bifrost
     environment:
       APP_HOST: "0.0.0.0"
@@ -22,22 +22,19 @@ services:
   # request (x-portkey-provider + Authorization / x-portkey-aws-*). This is the
   # "safe harbor" engine we evacuate onto - a compromise leaks no key vault.
   portkey:
-    image: portkeyai/gateway:latest
+    image: portkeyai/gateway:${PORTKEY_VERSION:-latest}
     container_name: agnos-proxy-portkey
     ports:
       - "8787:8787"
     restart: unless-stopped
 
-  # ── Commodity translator: LiteLLM proxy (STATEFUL) ─────────────────────
-  # Holds the provider keys itself (from the host .env) - the attackable engine
-  # in the demo. Distinct from the CVE lab (:4000); this one serves real traffic
-  # on :4100 so the live engine swap is demonstrable.
-  # ── Commodity translator: LiteLLM proxy (STATEFUL, production-grade) ───
-  # Genuinely stateful: it has its OWN Postgres and store_model_in_db=true. The
-  # gateway SYNCS provider models/creds into it at runtime (gateway/litellm/sync.py)
-  # via /model/new - mirroring how we sync managed keys into Bifrost. NO provider
-  # keys are baked in via env; they arrive from our encrypted vault over the admin
-  # API and live in THIS proxy's database (the attackable vault the demo evacuates).
+  # ── Commodity translator: LiteLLM proxy engine ────────────────────────
+  # Runs LiteLLM's OpenAI-compatible proxy as one interchangeable translation
+  # engine (serves on :4100). Provider keys are NOT stored here: each call uses
+  # LiteLLM "clientside credentials" and the Agnos Proxy boundary injects the
+  # decrypted provider key per request (see infra/litellm-engine/config.yaml).
+  # The companion Postgres holds only LiteLLM's own operational data (virtual
+  # keys / spend), never provider credentials.
   litellm-engine-db:
     image: postgres:16
     container_name: agnos-proxy-litellm-engine-db

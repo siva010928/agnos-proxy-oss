@@ -34,9 +34,9 @@ class Settings:
     # ── engine (the swappable translation slot) ──
     # A commodity translator plugs into ONE governed slot. Any of these engines can
     # serve any provider; the governance boundary is identical for all of them.
-    #   bifrost  · Go sidecar, stateful (stores provider keys)      [kept, optional]
-    #   litellm  · LiteLLM proxy, stateful translator (holds keys)  [the attackable one]
-    #   portkey  · Portkey OSS gateway, STATELESS (we inject the key per request)
+    #   bifrost  · Go sidecar; fast default translator
+    #   litellm  · LiteLLM proxy; widest provider coverage
+    #   portkey  · Portkey OSS gateway; stateless (key injected per request)
     #   direct   · our own in-process adapters (owned escape hatch)
     #   echo     · deterministic $0 in-process upstream (tests)
     engine: str = os.getenv("ENGINE", "bifrost")          # bifrost | litellm | portkey | direct | echo

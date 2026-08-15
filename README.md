@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-F5C451.svg)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-22D3EE.svg)](CONTRIBUTING.md)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](pyproject.toml)
+[![Release](https://img.shields.io/github/v/release/siva010928/agnos-proxy-oss?color=22D3EE)](https://github.com/siva010928/agnos-proxy-oss/releases)
+[![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange.svg)](CHANGELOG.md)
 
 **The gateway-agnostic control plane for LLM routing, cost-tracking and observability.**
 
@@ -19,7 +21,11 @@ attribution and full observability - for **any** provider, behind **any** transl
 > provider**, live, with one config change. A CVE in a translation engine becomes a *quarantine &
 > evacuate* config flip, not a fleet rebuild.
 
-MIT-licensed. Self-host the whole thing.
+MIT-licensed. Self-host the whole thing. **Try the [live demo](https://agnos-llm-gateway.site)** - a
+prototype playground (no sign-up, no keys, deterministic responses).
+
+> **Status: pre-1.0.** Fully usable and self-hostable today, but public APIs, config keys and the
+> dashboard may still change before v1.0 - pin a [release](https://github.com/siva010928/agnos-proxy-oss/releases) for stability.
 
 ---
 
@@ -389,9 +395,9 @@ tests/              pytest suite (runs on ENGINE=echo)
 ## Editions
 
 Agnos Proxy is **MIT-licensed** and fully self-hostable - the entire working product is in this
-repository. A hosted, interactive playground (guided walkthrough) is available separately in
-**prototype mode** (no real keys or provider calls) for people who want to click around before
-self-hosting.
+repository. A hosted, interactive playground (guided walkthrough) is available at
+**[agnos-llm-gateway.site](https://agnos-llm-gateway.site)** in **prototype mode** (no real keys or
+provider calls) for people who want to click around before self-hosting.
 
 ## Contributing
 

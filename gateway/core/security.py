@@ -100,8 +100,9 @@ def decode_bearer_jwt(token: str) -> dict | None:
 
 async def require_admin(request: Request) -> dict:
     """Allow if platform-admin token, an admin session cookie, or an admin api-key."""
-    # 1) platform admin token
-    if request.headers.get("x-admin-token") == settings.platform_admin_token:
+    # 1) platform admin token (constant-time compare)
+    admin_token = request.headers.get("x-admin-token")
+    if admin_token and hmac.compare_digest(admin_token, settings.platform_admin_token):
         return {"principal": "platform-admin", "roles": ["admin"]}
     # 2) dashboard session cookie
     cookie = request.cookies.get("agnos_session")

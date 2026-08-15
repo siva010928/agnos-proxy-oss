@@ -22,15 +22,17 @@ services:
       # Jaeger UI is served behind Caddy at /jaeger (QUERY_BASE_PATH=/jaeger), so the
       # 'view trace in Jaeger' deep-link must be relative to the domain.
       JAEGER_UI_URL: "/jaeger"
-      # Production admin password - injected from the DASHBOARD_ADMIN_PASSWORD
-      # GitHub secret via the deploy shell (see deploy.yml). Empty falls back to
-      # the dev default in config.py; never hardcode the real password here.
+      # Production auth - REQUIRED. Provide via the environment / secrets manager;
+      # never hardcode. Compose fails fast if any is unset, and the gateway refuses
+      # to start (PREVIEW_MODE=false) while these equal their shipped defaults.
+      #   *_SECRET / *_TOKEN: python -c "import secrets; print(secrets.token_urlsafe(32))"
       DASHBOARD_ADMIN_USER: "admin"
-      DASHBOARD_ADMIN_PASSWORD: "${DASHBOARD_ADMIN_PASSWORD:-}"
-      # Preview mode: /auth/preview issues a dashboard admin session with no
-      # password so the shared link shows the live dashboard (no sign-in wall). The
-      # real password above stays server-side. Set to "false" to require login.
-      PREVIEW_MODE: "true"
+      DASHBOARD_ADMIN_PASSWORD: "${DASHBOARD_ADMIN_PASSWORD:?set a strong dashboard admin password}"
+      PLATFORM_ADMIN_TOKEN: "${PLATFORM_ADMIN_TOKEN:?set a strong platform admin token}"
+      SESSION_SECRET: "${SESSION_SECRET:?set a strong random session secret}"
+      # Real deployment requires login (no passwordless preview). Preview stays on
+      # only in the public playground (deploy/docker-compose.playground.yml).
+      PREVIEW_MODE: "false"
       GOVERNANCE_DB_URL: "postgresql+asyncpg://agnos:agnos@postgres:5432/agnos_gateway"
       REDIS_URL: "redis://redis:6379"
       KAFKA_BROKERS: "kafka:9092"
@@ -61,7 +63,7 @@ services:
       retries: 5
 
   bifrost:
-    image: maximhq/bifrost:latest
+    image: maximhq/bifrost:${BIFROST_VERSION:-latest}
     container_name: agnos-proxy-bifrost
     environment:
       APP_HOST: "0.0.0.0"
@@ -178,7 +180,7 @@ services:
   # the boundary injects the provider key per request. A safe-harbor engine to
   # evacuate onto; required for the live engine slot.
   portkey:
-    image: portkeyai/gateway:latest
+    image: portkeyai/gateway:${PORTKEY_VERSION:-latest}
     container_name: agnos-proxy-portkey
     restart: unless-stopped
 

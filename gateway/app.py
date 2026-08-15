@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from gateway import __version__
 from gateway.config import settings
 from gateway.db.database import init_db
 from gateway.db.seed import seed
@@ -32,6 +33,20 @@ def validate_config() -> None:
         problems.append(f"ENGINE must be one of bifrost|litellm|portkey|direct|echo (got '{settings.engine}')")
     if not settings.db_url:
         problems.append("GOVERNANCE_DB_URL is not set")
+    # Fail closed on shipped-default secrets in a login-protected (non-preview) deployment.
+    # In PREVIEW_MODE (the public demo) the dashboard is intentionally open, so these dev
+    # defaults are expected; anywhere login is enforced they are a full-compromise risk.
+    if not settings.preview_mode:
+        if settings.platform_admin_token == "platform-admin-secret":
+            problems.append("PLATFORM_ADMIN_TOKEN is still the shipped default - set a strong secret")
+        if settings.session_secret == "agnos-proxy-session-secret":
+            problems.append("SESSION_SECRET is still the shipped default - set a strong random value")
+        if settings.dashboard_admin_password == "agnos":
+            problems.append("DASHBOARD_ADMIN_PASSWORD is still the dev default - set a strong password")
+        if settings.jwt_dev_trust and not settings.oidc_issuer:
+            _log.warning("insecure_jwt_dev_trust",
+                         msg="AGNOS_JWT_DEV_TRUST=true decodes workspace JWTs WITHOUT signature "
+                             "verification; set AGNOS_JWT_DEV_TRUST=false and OIDC_ISSUER in production")
     if problems:
         raise RuntimeError("Startup config invalid:\n  - " + "\n  - ".join(problems))
 
@@ -188,7 +203,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="Agnos Proxy",
                   description="OpenAI-compatible governance proxy over a swappable BackendEngine.",
-                  version="0.1.0", lifespan=lifespan)
+                  version=__version__, lifespan=lifespan)
     # OpenTelemetry tracing (auto-instrument FastAPI + explicit pipeline spans)
     try:
         from gateway.core.tracing import setup_tracing, instrument_fastapi
