@@ -63,17 +63,29 @@ Integration tests **auto-skip** when no gateway is reachable, so the default `py
 
 The anti-coupling test (`tests/test_anti_coupling.py`) enforces the `BackendEngine` boundary - if your change leaks an engine-specific field past the port, it fails on purpose.
 
+### Lint & type-check
+
+```bash
+poetry run ruff check .                 # Python lint (CI gate)
+poetry run mypy gateway/secrets gateway/bifrost gateway/governance gateway/db gateway/engines   # scoped types (CI gate)
+cd frontend && npm run typecheck && npm run lint    # TS strict + eslint (CI gate)
+```
+
+Ruff/mypy config lives in `pyproject.toml`; ESLint in `frontend/eslint.config.js`. The mypy gate is scoped to the typed-clean packages today and expands incrementally (see the note in `pyproject.toml`).
+
 ## Pull request flow
 
 1. **Open (or comment on) an issue first** for anything non-trivial, so we can agree on direction.
 2. Fork, then branch: `feat/<short-name>`, `fix/<short-name>`, or `docs/<short-name>`.
 3. Make the change. Keep PRs focused; one concern per PR.
-4. **Before pushing:**
-   - `poetry run pytest -m "not live and not integration"` is green
-   - `cd frontend && npm run build` succeeds (if you touched the dashboard)
+4. **Before pushing** (these mirror the CI gates):
+   - `poetry run pytest -m "not live and not integration"` is green (unit)
+   - `poetry run ruff check .` and the scoped `poetry run mypy ...` (above) are clean
+   - If you touched the dashboard: `cd frontend && npm run typecheck && npm run lint && npm run build`
+   - If you touched request/response behavior: `poetry run pytest -m integration` against a local gateway
    - No secrets, real keys, or personal data in the diff (`.env` is git-ignored - keep it that way)
 5. Open the PR against `main`, fill in the template, and link the issue (`Closes #123`).
-6. CI (unit tests + dashboard build) must pass. A maintainer reviews; address feedback with new commits (we squash-merge, so no need to force-push).
+6. **Required CI checks** must pass before merge: `Backend unit tests`, `Dashboard build` (typecheck + eslint + build), `Lint (ruff)`, `Types (mypy, scoped)`, and `Integration BVT`. Playwright E2E runs nightly / on-demand. A maintainer reviews; address feedback with new commits (we squash-merge).
 
 ### Commit / PR style
 
@@ -85,7 +97,7 @@ The anti-coupling test (`tests/test_anti_coupling.py`) enforces the `BackendEngi
 
 - **Python**: type hints on public functions; keep the `BackendEngine` contract clean (OpenAI in / OpenAI out; never leak engine internals past `EngineResult`). Prefer small, testable functions.
 - **Config is env-driven** (`gateway/config.py`) - never hardcode secrets, hosts, or keys.
-- **Frontend**: TypeScript + React; run `npm run build` before pushing.
+- **Frontend**: TypeScript + React (strict mode); run `npm run typecheck && npm run lint && npm run build` before pushing.
 - **Docs style**: use plain hyphens (`-`), not em dashes.
 
 ## Reporting security issues
