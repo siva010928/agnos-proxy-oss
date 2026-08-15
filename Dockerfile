@@ -7,7 +7,7 @@ RUN npm ci --no-audit
 COPY frontend/ ./
 RUN npm run build
 
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 WORKDIR /app
 
 # System deps for asyncpg, cryptography, tiktoken
