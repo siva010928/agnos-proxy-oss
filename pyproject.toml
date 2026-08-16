@@ -1,6 +1,6 @@
 [project]
 name = "agnos-proxy-llm-gateway"
-version = "0.2.0"
+version = "0.3.0"
 description = "Agnos Proxy - the gateway-agnostic control plane for LLM routing, cost-tracking and observability. OpenAI-compatible governance proxy over a swappable BackendEngine."
 authors = [{ name = "Agnos Proxy Contributors" }]
 license = "MIT"

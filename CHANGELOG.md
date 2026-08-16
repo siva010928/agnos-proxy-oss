@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-16
+
+Install-anywhere and packaging release: one-command installers, a Helm chart, and a
+PyPI-published `agnos` CLI, on top of a hardened test/CI baseline.
+
+### Added
+- **Installers**: interactive `install.sh` setup wizard (engine, provider keys, login
+  mode, port), a `docker-compose.quickstart.yml` for a zero-config local run, a `bin/agnos`
+  helper + `Makefile`, and `docs/INSTALL.md` covering every path.
+- **Helm chart** (`deploy/helm/agnos-proxy`) for Kubernetes deployments.
+- **PyPI package**: `agnos-proxy-llm-gateway` ships the `agnos` console-script CLI
+  (`agnos init`, run, ...); PEP 621 packaging and a Trusted-Publishing release workflow.
+
+### Changed
+- Integration BVTs now self-provision their fixtures, so the full 95-test suite runs in
+  CI with no deselects (now a required gate; closes the flaky-subset gap).
+- `mypy` gate expanded to cover `gateway/core` and `gateway/routes`.
+- Dependency upgrades: `recharts` 3, `react-router-dom` 7, `openai` (JS SDK) 3.
+- Dependabot retuned to low-noise (grouped, scheduled, majors held).
+
+### Fixed
+- Nightly Playwright e2e workflow is now deterministic: provider keys are sourced from
+  the environment (live "Test Connection" green paths self-skip when absent) and release
+  capture galleries are excluded on CI.
+
 ## [0.2.0] - 2026-08-15
 
 Open-source hardening and security fixes.
@@ -44,5 +69,6 @@ Initial public release.
 - OpenTelemetry traces, Prometheus metrics, an optional Kafka event bus, and a live SSE React dashboard.
 - Self-host stack (Docker Compose) and a production deployment (Caddy auto-TLS).
 
+[0.3.0]: https://github.com/siva010928/agnos-proxy-oss/releases/tag/v0.3.0
 [0.2.0]: https://github.com/siva010928/agnos-proxy-oss/releases/tag/v0.2.0
 [0.1.0]: https://github.com/siva010928/agnos-proxy-oss/releases/tag/v0.1.0
