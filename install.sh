@@ -89,6 +89,44 @@ else
   info "skipped ./agnos CLI (optional; add it later - see docs/INSTALL.md)"
 fi
 
+# ── interactive setup wizard (only on a real terminal; piped `curl|sh` keeps secure defaults) ──
+# Offer choices instead of defaulting everything. Skipped when stdin is not a TTY
+# (piped install), when AGNOS_NONINTERACTIVE=1, or when a .env already exists.
+ENGINE_CHOICE="echo"; PREVIEW_CHOICE="false"; PORT_CHOICE="8090"; PROVIDER_ENV=""
+if [ -t 0 ] && [ "${AGNOS_NONINTERACTIVE:-0}" != "1" ] && [ ! -f .env ]; then
+  step "Interactive setup (press Enter to accept the [default])"
+  printf '    Engine   1) echo - no keys, demo/look-around   2) direct - real providers, in-process   3) sidecar (bifrost|litellm|portkey)\n'
+  printf '    Choose [1]: '; read -r _e || _e=""
+  case "$_e" in
+    2) ENGINE_CHOICE="direct" ;;
+    3) printf '      which sidecar (bifrost|litellm|portkey) [bifrost]: '; read -r _s || _s=""; ENGINE_CHOICE="${_s:-bifrost}" ;;
+    *) ENGINE_CHOICE="echo" ;;
+  esac
+  if [ "$ENGINE_CHOICE" != "echo" ]; then
+    info "Provider keys (optional - leave blank to skip and add to .env later)"
+    for _pair in "ANTHROPIC_API_KEY:Anthropic" "OPENAI_API_KEY:OpenAI" "GEMINI_API_KEY:Gemini"; do
+      _k="${_pair%%:*}"; _label="${_pair##*:}"
+      printf '      %s: ' "$_label"; read -r _v || _v=""
+      [ -n "$_v" ] && PROVIDER_ENV="${PROVIDER_ENV}${_k}=${_v}
+"
+    done
+    printf '      AWS_ACCESS_KEY_ID (blank to skip): '; read -r _ak || _ak=""
+    if [ -n "$_ak" ]; then
+      printf '      AWS_SECRET_ACCESS_KEY: '; read -r _sk || _sk=""
+      PROVIDER_ENV="${PROVIDER_ENV}AWS_ACCESS_KEY_ID=${_ak}
+AWS_SECRET_ACCESS_KEY=${_sk}
+AWS_REGION_NAME=us-east-1
+"
+    fi
+  fi
+  printf '    Require login?   1) yes - generate a strong admin password [default]   2) no - open dashboard (demo/preview)\n'
+  printf '    Choose [1]: '; read -r _m || _m=""
+  case "$_m" in 2) PREVIEW_CHOICE="true" ;; *) PREVIEW_CHOICE="false" ;; esac
+  printf '    Host port [8090]: '; read -r _p || _p=""; PORT_CHOICE="${_p:-8090}"
+  printf '\n    -> engine=%s, login=%s, port=%s\n' "$ENGINE_CHOICE" "$([ "$PREVIEW_CHOICE" = false ] && echo required || echo open-preview)" "$PORT_CHOICE"
+  printf '    Proceed? [Y/n]: '; read -r _c || _c=""; case "$_c" in [Nn]*) die "aborted by user" ;; esac
+fi
+
 # ── 4. generate .env with strong secrets (never overwrite an existing one) ─────
 # urlsafe base64, padding stripped - accepted anywhere a token/passphrase is used.
 rand_urlsafe() { openssl rand -base64 "${1:-32}" | tr '+/' '-_' | tr -d '='; }
@@ -112,11 +150,12 @@ else
 # direct= in-process adapters (Anthropic/Bedrock/Gemini/OpenAI-compatible), no sidecar.
 # To use real providers: set ENGINE=direct and add the matching provider key(s) below.
 # Other engines (bifrost|litellm|portkey) are optional sidecars - see docs/ENGINES.md.
-ENGINE=echo
+ENGINE=$ENGINE_CHOICE
 
 # Require login (no passwordless preview). The gateway refuses to boot on default
 # secrets while this is false - which is why the strong secrets below are generated.
-PREVIEW_MODE=false
+PREVIEW_MODE=$PREVIEW_CHOICE
+GATEWAY_PORT=$PORT_CHOICE
 
 # ── Secrets (auto-generated - do not share) ──
 GATEWAY_MASTER_KEY=$MASTER_KEY
@@ -139,6 +178,7 @@ DASHBOARD_ADMIN_PASSWORD=$ADMIN_PASS
 # AWS_SECRET_ACCESS_KEY=
 # AWS_REGION_NAME=us-east-1
 EOF
+  [ -n "$PROVIDER_ENV" ] && printf '%s' "$PROVIDER_ENV" >> .env
   GENERATED_ENV=1
   info ".env created (chmod 600)"
 fi
