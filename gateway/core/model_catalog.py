@@ -127,7 +127,7 @@ def _infer_row(provider: str, model_id: str, is_embed: bool) -> dict:
 def load_catalog_rows() -> list[dict]:
     """Read data/provider_catalog.yaml → inferred ModelCatalog row dicts."""
     try:
-        import yaml
+        import yaml  # type: ignore[import-untyped]
         with open(_CATALOG_FILE) as f:
             cat = yaml.safe_load(f) or {}
     except Exception:

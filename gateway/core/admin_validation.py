@@ -470,7 +470,7 @@ def validate_provider_in(body: Any) -> list[dict[str, Any]]:
     rt = config.get("request_timeout_seconds")
     if rt not in (None, ""):
         try:
-            n = int(rt)
+            n = int(str(rt))
             if n < 1 or n > settings.max_request_timeout_s:
                 errors.append(err(["body", "config", "request_timeout_seconds"],
                                   f"request timeout must be between 1 and {settings.max_request_timeout_s} seconds"))

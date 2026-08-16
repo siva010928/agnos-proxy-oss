@@ -335,7 +335,7 @@ async def update_provider_config(workspace_id: str, provider: str, body: dict):
     rt = new_config.get("request_timeout_seconds")
     if rt not in (None, ""):
         try:
-            n = int(rt)
+            n = int(str(rt))
             if n < 1 or n > settings.max_request_timeout_s:
                 raise HTTPException(422, f"request timeout must be between 1 and {settings.max_request_timeout_s} seconds")
         except (TypeError, ValueError):

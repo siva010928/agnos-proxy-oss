@@ -31,7 +31,7 @@ def resolve_timeout_s(config: dict | None) -> int:
     cfg = config or {}
     raw = cfg.get("request_timeout_seconds") or cfg.get("default_request_timeout_in_seconds")
     try:
-        v = int(raw) if raw not in (None, "") else settings.bifrost_default_timeout_s
+        v = int(str(raw)) if raw not in (None, "") else settings.bifrost_default_timeout_s
     except (TypeError, ValueError):
         v = settings.bifrost_default_timeout_s
     return max(1, min(v, settings.max_request_timeout_s))
