@@ -53,7 +53,7 @@ def _missing(provider: str, creds: dict, config: dict) -> str | None:
         else:
             fields = ["access_key", "secret_key"]
     else:
-        fields = REQUIRED.get(provider)
+        fields = REQUIRED.get(provider) or []
     if not fields:
         return f"unknown provider '{provider}'"
     blanks = [k for k in fields

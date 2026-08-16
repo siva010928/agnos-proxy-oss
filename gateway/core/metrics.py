@@ -73,8 +73,12 @@ def render() -> tuple[bytes, str]:
     return generate_latest(), CONTENT_TYPE_LATEST
 
 
-def _safe(s: str | None, *, max_len: int = 32) -> str:
-    """Trim+sanitise a label value. None/empty \u2192 '-' so series don't break."""
+def _safe(s: str | int | None, *, max_len: int = 32) -> str:
+    """Trim+sanitise a label value. None/empty \u2192 '-' so series don't break.
+
+    Accepts int too (e.g. the ``threshold`` label is an int); the body coerces
+    with ``str()`` regardless, so widening the annotation is behaviour-preserving.
+    """
     if not s:
         return "-"
     s = str(s)

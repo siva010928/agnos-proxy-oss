@@ -427,7 +427,7 @@ def test_g4_embeddings_disabled_model_in_catalog_returns_403(http_admin, fresh_w
         # admin endpoint accepted the disable.
         r = http_admin.get("/admin/model-catalog")
         rows = [m for m in r.json()["models"]
-                if m["provider"] == "bedrock" and m["model_id"].startswith("amazon.titan")]
+                if m["provider"] == "bedrock" and m["model_id"] == "amazon.titan-embed-text-v2:0"]
         assert rows and rows[0]["enabled"] is False
     finally:
         # re-enable so subsequent tests are fine
@@ -858,11 +858,13 @@ def test_g12_cross_workspace_scoped_rule_cannot_be_activated(fresh_workspace, ht
     assert p.status_code == 200, p.text
     pid = p.json()["id"]
 
-    # Rule scoped to a DIFFERENT workspace than fresh_workspace.
+    # Rule scoped to a DIFFERENT (real, seeded) workspace than fresh_workspace.
+    # ws-novatech-platform is provisioned by the cold-start seed and is never the
+    # wsbvt-* id fresh_workspace mints, so it's a valid foreign scope.
     r = http_admin.post("/admin/guardrails/rules", json={
         "name": rname, "enabled": True, "cel_expression": "true",
         "apply_to": "input", "action": "block",
-        "profile_ids": [pid], "scope": "workspace", "workspace_id": "ws-acme-payments",
+        "profile_ids": [pid], "scope": "workspace", "workspace_id": "ws-novatech-platform",
     })
     assert r.status_code == 200, r.text
     rid = r.json()["id"]
@@ -897,7 +899,7 @@ def test_g13_rule_listing_is_scope_filtered_per_workspace(http_admin):
     r = http_admin.post("/admin/guardrails/rules", json={
         "name": rname, "enabled": True, "cel_expression": "true",
         "apply_to": "input", "action": "block",
-        "profile_ids": [], "scope": "workspace", "workspace_id": "ws-acme-payments",
+        "profile_ids": [], "scope": "workspace", "workspace_id": "ws-novatech-platform",
     })
     assert r.status_code == 200, r.text
     rid = r.json()["id"]
@@ -908,7 +910,7 @@ def test_g13_rule_listing_is_scope_filtered_per_workspace(http_admin):
             return {x["name"] for x in resp.json()["rules"]}
 
         # owner workspace sees it
-        assert rname in names("?workspace_id=ws-acme-payments")
+        assert rname in names("?workspace_id=ws-novatech-platform")
         # a different workspace does NOT (leak closed)
         assert rname not in names("?workspace_id=ws-novatech-payments")
         # admin-wide (no param) still sees everything

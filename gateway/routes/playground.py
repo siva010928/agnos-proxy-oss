@@ -353,7 +353,7 @@ async def playground_run(body: PlaygroundRunRequest, request: Request):
         if resp.status_code == 200:
             data = resp.json()
             choices = data.get("choices", [])
-            tool_calls_list: list[dict] = []
+            tool_calls_list = []
             if choices:
                 msg = choices[0].get("message", {})
                 response_text = msg.get("content") or ""

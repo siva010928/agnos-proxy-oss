@@ -22,7 +22,7 @@ from gateway.core.guardrails.detectors import (
 
 try:
     import celpy  # cel-python
-    _CEL = celpy
+    _CEL: Any = celpy
 except Exception:  # noqa: BLE001
     _CEL = None
 

@@ -136,15 +136,17 @@ ignore = [
 
 [tool.mypy]
 # mypy is a SCOPED CI gate (see the `types` job in .github/workflows/ci.yml). The
-# gate type-checks ONLY the packages that are already clean:
+# gate type-checks the packages that are annotated clean (0 errors):
 #     gateway/secrets gateway/bifrost gateway/governance gateway/db gateway/engines
-# The rest of the tree - notably gateway/core.* and gateway/routes.* - is still on
-# the untyped/in-progress surface and is EXCLUDED from the gate pending incremental
-# typing. `follow_imports = "silent"` lets those out-of-scope modules be analyzed for
-# the type info the in-scope code needs WITHOUT reporting their own errors, so a type
-# error in core/routes never fails this gate. Widen the scope (and relax nothing else)
-# as core/routes get annotated. `ignore_missing_imports` keeps optional/native-stub-less
-# third-party libs from tripping the gate (matches the additive Ruff approach).
+#     gateway/core gateway/routes
+# Any package NOT yet in that list stays on the untyped/in-progress surface and is
+# read only for the type info the in-scope code needs. `follow_imports = "silent"`
+# analyzes those out-of-scope modules WITHOUT reporting their own errors, so a type
+# error in a not-yet-scoped module never fails this gate. Widen the scope (and relax
+# nothing else) as the remaining packages get annotated. `ignore_missing_imports`
+# keeps optional/native-stub-less third-party libs from tripping the gate (matches
+# the additive Ruff approach). check_untyped_defs stays OFF (signatures are typed,
+# function bodies are not checked yet).
 python_version = "3.12"
 ignore_missing_imports = true
 warn_unused_ignores = false

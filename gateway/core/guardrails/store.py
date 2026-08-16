@@ -13,6 +13,7 @@ import asyncio
 import random
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 from sqlalchemy import or_, select
 
@@ -303,7 +304,7 @@ async def test_rule(content: str, cel: str, profiles: list[dict], action: str = 
     """Real evaluation for the UI Test panel - runs the rule's CEL + each linked
     detector against sample content, returning matched-condition info, per-detector
     findings (with processing time), and a recommended action."""
-    body = {"messages": [{"role": "user", "content": content}]}
+    body: dict[str, Any] = {"messages": [{"role": "user", "content": content}]}
     if model:
         body["model"] = model
     cel_ctx = {"workspace": "", "component": "", "user": "", "headers": headers or {}}
@@ -316,7 +317,7 @@ async def test_rule(content: str, cel: str, profiles: list[dict], action: str = 
     errors: list[str] = []
     for p in profiles:
         try:
-            dets.append((p.get("detector_type", "?"), build_detector(p.get("detector_type"), p.get("config") or {})))
+            dets.append((p.get("detector_type", "?"), build_detector(p.get("detector_type", "?"), p.get("config") or {})))
         except NotConfigured as exc:
             errors.append(str(exc))
 

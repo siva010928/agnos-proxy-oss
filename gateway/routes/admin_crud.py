@@ -1418,7 +1418,6 @@ async def platform_value(currency: str | None = None):
     # Unit economics (measured from live data)
     cost_per_req_usd = total_usd / max(1, total_requests)
     margin_per_req_usd = margin_usd / max(1, total_requests)
-    tokens_per_req = (await async_session().__aenter__() is None) or 0  # placeholder
     async with async_session() as s:
         total_tokens = await s.scalar(
             select(func.coalesce(func.sum(RequestLog.input_tokens + RequestLog.output_tokens), 0))

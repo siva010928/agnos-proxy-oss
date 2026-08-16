@@ -127,7 +127,7 @@ async def embeddings(request: Request):
                                        "http_status": 400, "message": f"missing required headers: {miss}"})
             return JSONResponse(status_code=400, headers=hdrs, content=required_headers_error(miss))
 
-    alias = body.get("model")
+    alias: str = body.get("model") or ""
     target = resolve_embedding_target(ws, alias)
     texts = _embed_texts(body)
     est_tokens = sum(estimate_tokens(t) for t in texts) or 1

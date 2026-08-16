@@ -87,15 +87,70 @@ def test_filter_client_changes_cost_rollup(fresh_workspace, http_admin, gateway_
 
 
 def test_source_live_default_excludes_synthetic(http_admin):
-    """Default analytics scope is source='live'. The synthetic backfill (184k
-    rows) must be excluded unless include_synthetic=true is passed."""
-    live_only = http_admin.get("/admin/request-logs", params={"limit": 1}).json()["total"]
-    with_synth = http_admin.get("/admin/request-logs",
-                                params={"limit": 1, "include_synthetic": "true"}).json()["total"]
-    assert with_synth > live_only, (
-        f"include_synthetic didn't increase the count "
-        f"(live={live_only}, with_synth={with_synth})"
-    )
+    """Default analytics scope is source='live': synthetic-tagged rows are
+    excluded unless include_synthetic=true is passed.
+
+    Self-provisioning: a fresh cold-start DB has no synthetic backfill, and the
+    ONLY mechanism that mints source='synthetic' rows is a direct RequestLog
+    insert (that's what scripts/seed_synthetic.py does - the HTTP governance
+    path always tags source='live', see gateway/governance/postgres_observer.py).
+    So we insert a couple of uniquely-tagged synthetic rows the same way the
+    seeder does, assert the include_synthetic filter flips them in/out, then
+    delete them again in teardown."""
+    import asyncio
+    from datetime import datetime
+
+    from sqlalchemy import delete
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from gateway.config import settings
+    from gateway.db.models import RequestLog
+
+    marker = f"synbvt-{uuid.uuid4().hex[:10]}"
+    req_ids = [f"{marker}-{i}" for i in range(2)]
+
+    async def _run(op):
+        # A throwaway engine bound to THIS call's event loop, so the two
+        # asyncio.run() calls below never try to reuse an asyncpg connection
+        # across event loops (which would raise "attached to a different loop").
+        eng = create_async_engine(settings.db_url)
+        try:
+            async with async_sessionmaker(eng, expire_on_commit=False)() as s:
+                await op(s)
+                await s.commit()
+        finally:
+            await eng.dispose()
+
+    async def _insert(s):
+        for rid in req_ids:
+            s.add(RequestLog(
+                timestamp=datetime.utcnow(), request_id=rid,
+                workspace_id="ws-novatech-payments", provider="bedrock",
+                model_alias="claude-sonnet-4-5",
+                provider_model_id="us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+                input_tokens=1, output_tokens=1, status="success",
+                call_kind="chat", event_kind="completion", source="synthetic"))
+
+    async def _cleanup(s):
+        await s.execute(delete(RequestLog).where(RequestLog.request_id.in_(req_ids)))
+
+    asyncio.run(_run(_insert))
+    try:
+        # Filter to just our marker rows (request_id is an ILIKE substring match)
+        # so the assertion is immune to any concurrent live traffic other tests
+        # generate between the two calls.
+        live_only = http_admin.get(
+            "/admin/request-logs", params={"request_id": marker, "limit": 5}).json()["total"]
+        with_synth = http_admin.get(
+            "/admin/request-logs",
+            params={"request_id": marker, "limit": 5, "include_synthetic": "true"}).json()["total"]
+        assert live_only == 0, f"synthetic rows leaked into the default live scope (got {live_only})"
+        assert with_synth == len(req_ids), (
+            f"include_synthetic didn't surface the synthetic rows "
+            f"(live={live_only}, with_synth={with_synth})")
+        assert with_synth > live_only
+    finally:
+        asyncio.run(_run(_cleanup))
 
 
 def test_request_logs_ilike_user(fresh_workspace, http_admin, gateway_url):

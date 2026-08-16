@@ -124,9 +124,14 @@ def _build_event(kind: str, correlation_id: str, payload: dict) -> GovernanceEve
         return RequestErrorEvent(
             request_id=cid,
             workspace_id=p["workspace_id"],
-            provider=p["provider"],
+            user_id=p.get("user_id"),
             model_alias=p["model"],
+            provider=p["provider"],
+            engine=p.get("engine", "external"),
             error_type=p.get("error_type") or "unknown",
+            http_status=int(p.get("http_status") or 0),
+            message=p.get("message") or p.get("error_type") or "external error",
+            latency_ms=float(p.get("latency_ms") or 0.0),
         )
 
     if kind == "guardrail_block":
@@ -141,6 +146,7 @@ def _build_event(kind: str, correlation_id: str, payload: dict) -> GovernanceEve
             detector=p.get("detector", "external"),
             action=p.get("action", "block"),
             stage=p.get("stage", "input"),
+            excerpt=p.get("excerpt") or "",
         )
 
     if kind == "fallback":

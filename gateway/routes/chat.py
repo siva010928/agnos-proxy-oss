@@ -124,12 +124,15 @@ async def chat_completions(request: Request):
         _span.set_attribute("correlation_id", request_id)
         _parent_ctx = _otel.set_span_in_context(_span)
     except Exception:  # noqa: BLE001
-        _span, _parent_ctx, _otel = None, None, None
+        # _otel is only referenced inside this try block, so it doesn't need a
+        # None sentinel here (and typing it as Module | None would be noise).
+        _span, _parent_ctx = None, None
 
     def _stage_ns(pc: float) -> int:
         return started_ns + int((pc - started) * 1e9)
 
-    def _child(name: str, pc0: float, pc1: float, *, error: dict | None = None, **attrs) -> None:
+    def _child(name: str, pc0: float, pc1: float, *, error: dict | None = None,
+               attrs: dict | None = None) -> None:
         if _span is None:
             return
         try:
@@ -137,7 +140,7 @@ async def chat_completions(request: Request):
             from gateway.core.tracing import tracer
             cs = tracer().start_span(name, context=_parent_ctx, start_time=_stage_ns(pc0))
             cs.set_attribute("correlation_id", request_id)
-            for k, v in attrs.items():
+            for k, v in (attrs or {}).items():
                 cs.set_attribute(k, v)
             if error:
                 # Mark the stage span FAILED so the trace exposes the real failure
@@ -178,7 +181,6 @@ async def chat_completions(request: Request):
     if required:
         miss = missing_required_headers(dict(request.headers), required)
         if miss:
-            _finish_span(False) if False else None  # span ends in finally below
             if _span is not None:
                 _span.set_attribute("agnos.ok", False)
                 _span.set_attribute("agnos.missing_headers", ", ".join(miss))
@@ -237,9 +239,9 @@ async def chat_completions(request: Request):
             _span.set_attribute("agnos.component", component)
         if use_case:
             _span.set_attribute("agnos.use_case", use_case)
-    _child("auth", started, t_auth, **{"agnos.workspace_id": ws.workspace_id})
-    _child("routing", t_auth, t_route, **{"agnos.provider": target.provider,
-                                          "agnos.model_alias": model_alias})
+    _child("auth", started, t_auth, attrs={"agnos.workspace_id": ws.workspace_id})
+    _child("routing", t_auth, t_route, attrs={"agnos.provider": target.provider,
+                                              "agnos.model_alias": model_alias})
 
     def _finish_span(ok: bool, *, error: dict | None = None) -> None:
         if _span is not None:
@@ -381,7 +383,7 @@ async def chat_completions(request: Request):
                 sub_category=f.category, confidence=getattr(f, "confidence", 1.0)))
         if outcome.blocked:
             _child("guardrails", t_route, time.perf_counter(),
-                   **{"agnos.guardrail_action": "block", "agnos.guardrail_rule": outcome.rule})
+                   attrs={"agnos.guardrail_action": "block", "agnos.guardrail_rule": outcome.rule})
             if _span is not None:
                 _span.set_attribute("agnos.guardrail.result", "blocked")
                 _span.set_attribute("agnos.guardrail.rule", outcome.rule)
@@ -438,13 +440,13 @@ async def chat_completions(request: Request):
     # ── Chunking (opt-in) ──
     truncate = (request.headers.get("x-gateway-auto-truncate", "").lower() == "true"
                 or bool((ws.guardrails or {}).get("auto_truncate")))
-    trunc_info = {}
+    trunc_info: dict = {}
     if truncate:
         body["messages"], trunc_info = apply_truncation(body["messages"], target.context_window)
 
     t_policy = time.perf_counter()
     _child("guardrails", t_route, t_policy,
-           **{"agnos.guardrail_action": outcome.action if outcome.findings else "none"})
+           attrs={"agnos.guardrail_action": outcome.action if outcome.findings else "none"})
     stream = bool(body.get("stream"))
     has_tools = bool(body.get("tools"))
     eng = engine()
@@ -498,7 +500,7 @@ async def chat_completions(request: Request):
             _finish_span(True)
 
         def _stream_err(err: dict, t0: float) -> None:
-            _child("engine", t0, time.perf_counter(), error=err, **{"agnos.engine": eng.name})
+            _child("engine", t0, time.perf_counter(), error=err, attrs={"agnos.engine": eng.name})
             _finish_span(False, error=err)
 
         return StreamingResponse(
@@ -563,11 +565,11 @@ async def chat_completions(request: Request):
             error_detail=provider_error_detail,
             use_case=use_case, input_tokens=est_tokens, provider_model_id=target.model_id,
         ))
-        _eng_err = {"type": err["error"]["type"], "code": err["error"].get("code"),
+        _eng_err: dict | None = {"type": err["error"]["type"], "code": err["error"].get("code"),
                     "http_status": code, "provider": target.provider,
                     "message": err["error"]["message"], "category": "provider_error"}
         _child("engine", t_eng0, time.perf_counter(), error=_eng_err,
-               **{"agnos.engine": eng.name, "agnos.provider": target.provider,
+               attrs={"agnos.engine": eng.name, "agnos.provider": target.provider,
                   "agnos.provider_model_id": target.model_id})
         _finish_span(False, error=_eng_err)
         return JSONResponse(status_code=code, content=err,
@@ -578,12 +580,12 @@ async def chat_completions(request: Request):
     _served_ok = fb.result.ok
     _eng_err = None
     if not _served_ok:
-        _c, _e = errors.map_bifrost_error(fb.result.status_code, fb.result.body)
+        _code, _e = errors.map_bifrost_error(fb.result.status_code, fb.result.body)
         _eng_err = {"type": _e["error"]["type"], "code": _e["error"].get("code"),
                     "http_status": fb.result.status_code, "provider": fb.target.provider,
                     "message": _e["error"]["message"], "category": "provider_error"}
     _child("engine", t_eng0, time.perf_counter(), error=_eng_err,
-           **{"agnos.engine": eng.name, "agnos.provider": fb.target.provider,
+           attrs={"agnos.engine": eng.name, "agnos.provider": fb.target.provider,
               "agnos.provider_model_id": fb.target.model_id, "agnos.attempt": fb.attempt})
     if _span is not None and fb.fallbacks_emitted:
         _span.set_attribute("agnos.fallback.attempted", True)
@@ -751,7 +753,7 @@ async def chat_completions(request: Request):
         except Exception:  # noqa: BLE001
             pass
     _child("governance", t_gov0, time.perf_counter(),
-           **{"agnos.engine": eng.name, "agnos.input_tokens": int(usage["input_tokens"]),
+           attrs={"agnos.engine": eng.name, "agnos.input_tokens": int(usage["input_tokens"]),
               "agnos.output_tokens": int(usage["output_tokens"]), "agnos.cost_usd": float(cost)})
     _finish_span(True)
     # populate response cache / idempotency store

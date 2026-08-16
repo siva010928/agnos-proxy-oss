@@ -87,7 +87,7 @@ def add_live_spend(client_id: str | None, workspace_id: str, user_id: str | None
     import time as _t
     now = _t.monotonic()
     expiry = now + _LIVE_DELTA_TTL
-    keys = [
+    keys: list[tuple[str, str | None, str | None, str | None]] = [
         ("client",    client_id,    None,    None),
         ("workspace", workspace_id, None,    None),
         ("user",      workspace_id, user_id, None),
