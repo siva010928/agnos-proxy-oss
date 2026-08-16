@@ -6,6 +6,8 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](pyproject.toml)
 [![Release](https://img.shields.io/github/v/release/siva010928/agnos-proxy-oss?color=22D3EE)](https://github.com/siva010928/agnos-proxy-oss/releases)
 [![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange.svg)](CHANGELOG.md)
+[![Docs](https://img.shields.io/badge/docs-agnos--llm--gateway.site-E8604C.svg)](https://agnos-llm-gateway.site/app/docs)
+[![PyPI](https://img.shields.io/pypi/v/agnos-proxy-llm-gateway?color=8B5CF6&label=pypi)](https://pypi.org/project/agnos-proxy-llm-gateway/)
 
 **The gateway-agnostic control plane for LLM routing, cost-tracking and observability.**
 
@@ -21,8 +23,9 @@ attribution and full observability - for **any** provider, behind **any** transl
 > provider**, live, with one config change. A CVE in a translation engine becomes a *quarantine &
 > evacuate* config flip, not a fleet rebuild.
 
-MIT-licensed. Self-host the whole thing. **Try the [live demo](https://agnos-llm-gateway.site)** - a
-prototype playground (no sign-up, no keys, deterministic responses).
+MIT-licensed. Self-host the whole thing. **[Read the docs &rarr;](https://agnos-llm-gateway.site/app/docs)**
+&middot; **Try the [live demo](https://agnos-llm-gateway.site)** - a prototype playground (no sign-up, no
+keys, deterministic responses).
 
 > **Status: pre-1.0.** Fully usable and self-hostable today, but public APIs, config keys and the
 > dashboard may still change before v1.0 - pin a [release](https://github.com/siva010928/agnos-proxy-oss/releases) for stability.
@@ -31,6 +34,7 @@ prototype playground (no sign-up, no keys, deterministic responses).
 
 ## Contents
 
+- [Documentation site](https://agnos-llm-gateway.site/app/docs)
 - [Why](#why)
 - [Architecture](#architecture-hexagonal--ports-and-adapters)
 - [Engines](#engines--pick-the-best-per-provider-swap-at-runtime)
