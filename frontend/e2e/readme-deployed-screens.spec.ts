@@ -16,9 +16,12 @@ const BASE = process.env.DEPLOY_BASE || 'http://localhost:8090'
 const USER = process.env.DEPLOY_USER || 'admin'
 const PASS = process.env.DEPLOY_PASS || ''
 
-if (!PASS) {
-  throw new Error('Set DEPLOY_PASS (dashboard admin password) in the environment before running this capture.')
-}
+// Capture tooling, not CI validation. Skip at runtime (never throw at import) when
+// DEPLOY_PASS is absent so merely collecting this file cannot fail a run. CI excludes
+// it entirely via playwright.config testIgnore.
+test.beforeEach(() => {
+  test.skip(!PASS, 'Set DEPLOY_PASS (dashboard admin password) to run the deployed capture.')
+})
 
 async function deployedLogin(page: Page) {
   // Hit the API directly so the session cookie is set on this browser context;

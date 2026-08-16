@@ -1,20 +1,13 @@
 import { expect, test } from '@playwright/test'
-import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { gotoApp, guardNo4xx, snap, typeRealUser } from './_helpers'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
 const ALLOW = [/\/events($|\?)/]
 
-function envFromDotenv(key: string): string {
-  const dotenv = readFileSync(resolve(__dirname, '../../.env'), 'utf8')
-  const m = dotenv.match(new RegExp(`^${key}=\\"?([^"\\n]+)\\"?$`, 'm'))
-  if (!m) throw new Error(`missing ${key} in .env`)
-  return m[1]
-}
-
-const ANTHROPIC_KEY = envFromDotenv('ANTHROPIC_API_KEY')
+// Real Anthropic key for the live "Test Connection" GREEN path. Sourced from the
+// environment (playwright.config hydrates it from the gitignored root .env for local
+// runs). Absent in CI: the green-path assertions self-skip, while the UI-gating and
+// bogus-key -> red assertions (which need no real key) still run.
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || ''
 
 // Providers now defaults to an ALL-WORKSPACES overview (no workspace forced), so
 // "Add provider" is enabled only once a specific workspace is chosen. Deep-link to
@@ -55,6 +48,10 @@ test('providers: Save is HARD-BLOCKED until Test Connection passes', async ({ pa
   await page.getByTestId('provider-test').click()
   await expect(page.getByTestId('provider-test-fail')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByTestId('provider-save')).toBeDisabled()
+
+  // The GREEN path needs a REAL upstream key. Skip it when absent (e.g. CI) - the
+  // security-critical red-path lock-in above has already been asserted.
+  test.skip(!ANTHROPIC_KEY, 'green path needs a real ANTHROPIC_API_KEY (set it in root .env)')
 
   // Valid → green, NOW Save is enabled
   await typeRealUser(page.getByTestId('provider-field-api_key'), ANTHROPIC_KEY)

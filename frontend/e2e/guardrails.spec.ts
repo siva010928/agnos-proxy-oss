@@ -1,19 +1,14 @@
 import { test, expect } from '@playwright/test'
-import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { gotoApp, guardNo4xx, snap, typeRealUser, uniqId } from './_helpers'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
 const ALLOW = [/\/events($|\?)/]
 const ADMIN = { 'X-Admin-Token': 'platform-admin-secret', 'Content-Type': 'application/json' }
 
-function envFromDotenv(key: string): string {
-  const dotenv = readFileSync(resolve(__dirname, '../../.env'), 'utf8')
-  const m = dotenv.match(new RegExp(`^${key}=\\"?([^"\\n]+)\\"?$`, 'm'))
-  if (!m) throw new Error(`missing ${key} in .env`)
-  return m[1]
-}
+// Real AWS creds for the Bedrock Guardrails live probe. From the environment
+// (playwright.config hydrates the gitignored root .env for local runs). Absent in
+// CI: the single test that needs them self-skips.
+const AWS_AK = process.env.AWS_ACCESS_KEY_ID || ''
+const AWS_SK = process.env.AWS_SECRET_ACCESS_KEY || ''
 
 // ─────────────────────────────────────────────────────────────────────
 // Configuration page - visual rule builder + live CEL preview + test panel
@@ -188,8 +183,9 @@ test('providers: catalog renders + Custom Regex with PII template (edit-mode foc
 
 test('providers: Bedrock config - gated Test, bogus → red, valid → green', async ({ page, request }) => {
   const guard = guardNo4xx(page, ALLOW)
-  const AK = envFromDotenv('AWS_ACCESS_KEY_ID')
-  const SK = envFromDotenv('AWS_SECRET_ACCESS_KEY')
+  test.skip(!AWS_AK || !AWS_SK, 'needs real AWS creds for the Bedrock guardrail probe (set them in root .env)')
+  const AK = AWS_AK
+  const SK = AWS_SK
   const profileName = uniqId('e2e-bedrock')
 
   await gotoApp(page, 'guardrails/providers')
