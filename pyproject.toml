@@ -1,6 +1,6 @@
 [project]
 name = "agnos-proxy-llm-gateway"
-version = "0.3.0"
+version = "0.3.1"
 description = "Agnos Proxy - the gateway-agnostic control plane for LLM routing, cost-tracking and observability. OpenAI-compatible governance proxy over a swappable BackendEngine."
 authors = [{ name = "Agnos Proxy Contributors" }]
 license = "MIT"
@@ -25,7 +25,10 @@ python = "^3.12"
 
 # Web framework
 fastapi = "^0.115.0"
-uvicorn = { extras = ["standard"], version = "^0.32.0" }
+# Ceiling kept open (<1.0, not ^0.32) so a fresh `pip install` can co-resolve with
+# transitive deps that require newer uvicorn (e.g. pydantic-ai -> fastmcp-slim needs
+# uvicorn>=0.35). poetry.lock still pins the exact tested version for Docker builds.
+uvicorn = { extras = ["standard"], version = ">=0.32.0,<1.0.0" }
 
 # OpenAI SDK - request validation + response/chunk Pydantic types
 openai = "^3.0.0"
