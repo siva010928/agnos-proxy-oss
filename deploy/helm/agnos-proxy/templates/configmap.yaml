@@ -1,0 +1,28 @@
+{{- /*
+Non-secret gateway configuration. Consumed via envFrom in the Deployment. Secret
+values (master key, admin password, provider keys) live in the Secret, not here.
+GOVERNANCE_DB_URL / REDIS_URL are computed from the bundled datastores unless
+overridden (see _helpers.tpl).
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agnos-proxy.configName" . }}
+  labels:
+    {{- include "agnos-proxy.labels" . | nindent 4 }}
+data:
+  GATEWAY_HOST: "0.0.0.0"
+  # Fixed in-container bind. The Service maps .Values.service.port -> this container
+  # port (targetPort), so changing service.port never drifts the listener off 8090.
+  GATEWAY_PORT: "8090"
+  ENGINE: {{ .Values.engine | quote }}
+  PREVIEW_MODE: {{ .Values.previewMode | quote }}
+  DASHBOARD_ADMIN_USER: {{ .Values.dashboardAdminUser | default "admin" | quote }}
+  {{- $dbUrl := include "agnos-proxy.governanceDbUrl" . }}
+  {{- if $dbUrl }}
+  GOVERNANCE_DB_URL: {{ $dbUrl | quote }}
+  {{- end }}
+  REDIS_URL: {{ include "agnos-proxy.redisUrl" . | quote }}
+  {{- range $k, $v := .Values.env }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

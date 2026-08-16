@@ -1,0 +1,66 @@
+{{- /*
+Gateway Deployment. Config + secrets are injected via envFrom (ConfigMap + Secret).
+IMPORTANT: both probes hit GET /health (NOT /health/ready). /health/ready pings the
+backend engine and returns 503 on the echo engine (readiness there means "a real
+provider is reachable"), which would wedge the pod NotReady on the keyless default.
+/health is a liveness/readiness signal for "the process is up and serving".
+*/ -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agnos-proxy.fullname" . }}
+  labels:
+    {{- include "agnos-proxy.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "agnos-proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        # Roll the pods when the non-secret config changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "agnos-proxy.labels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: gateway
+          image: {{ include "agnos-proxy.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "agnos-proxy.configName" . }}
+            - secretRef:
+                name: {{ include "agnos-proxy.secretName" . }}
+          # Liveness on /health - restart the container only if the process wedges.
+          # Generous startup grace: schema creation on first boot can take a while.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          # Readiness on /health too (see the header note on /health/ready + echo).
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

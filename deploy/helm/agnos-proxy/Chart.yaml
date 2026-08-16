@@ -1,0 +1,19 @@
+apiVersion: v2
+name: agnos-proxy
+description: Agnos Proxy - the gateway-agnostic control plane for LLM routing, cost-tracking and observability. OpenAI-compatible governance proxy over a swappable BackendEngine.
+type: application
+# Chart version - bump on any chart change (independent of the app).
+version: 0.1.0
+# Version of the gateway app this chart deploys by default (image tag fallback).
+appVersion: "0.2.0"
+home: https://github.com/siva010928/agnos-proxy-oss
+sources:
+  - https://github.com/siva010928/agnos-proxy-oss
+keywords:
+  - llm
+  - gateway
+  - proxy
+  - openai
+  - governance
+maintainers:
+  - name: Agnos Proxy Contributors

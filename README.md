@@ -218,6 +218,8 @@ Fastest paths to a running gateway - full guide in **[docs/INSTALL.md](docs/INST
 | **Prebuilt image** | `docker pull ghcr.io/siva010928/agnos-proxy:latest` | Pull the published image (pin `:v0.2.0` for a release) |
 | **Compose (no build)** | `docker compose -f deploy/docker-compose.quickstart.yml up -d` | Gateway + Postgres + Redis from the prebuilt image (create `.env` first) |
 
+Also: **Kubernetes** via the Helm chart (`helm install agnos deploy/helm/agnos-proxy -n agnos --create-namespace`) and the **`agnos` CLI** via pipx (`pipx install agnos-proxy-llm-gateway` then `agnos init && agnos up`) - see **[docs/INSTALL.md](docs/INSTALL.md)**.
+
 The one-liner generates strong secrets, runs the keyless `echo` engine (no provider keys),
 waits for health, then prints your dashboard URL + admin login. See
 **[docs/INSTALL.md](docs/INSTALL.md)** for the `agnos` CLI, a single `docker run`, from-source,

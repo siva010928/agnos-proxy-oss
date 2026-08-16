@@ -14,9 +14,11 @@ Configuration is env-driven; every knob lives in [`.env.example`](../.env.exampl
 - [1. One-liner (recommended)](#1-one-liner-recommended)
 - [2. Prebuilt image / compose](#2-prebuilt-image--compose)
 - [3. Single docker run (keyless look-around)](#3-single-docker-run-keyless-look-around)
-- [4. The `agnos` CLI](#4-the-agnos-cli)
-- [5. From source (dev)](#5-from-source-dev)
-- [6. Configuration](#6-configuration)
+- [4. Kubernetes (Helm)](#4-kubernetes-helm)
+- [5. CLI via pipx](#5-cli-via-pipx)
+- [6. The `agnos` CLI](#6-the-agnos-cli)
+- [7. From source (dev)](#7-from-source-dev)
+- [8. Configuration](#8-configuration)
 - [Notes](#notes)
 
 ---
@@ -39,7 +41,7 @@ This is the secure default. The installer:
   generated admin login.
 
 It never overwrites an existing `.env`, so it is safe to re-run. When you are ready for
-real traffic, set `ENGINE=direct` and add a provider key (see [Configuration](#6-configuration)).
+real traffic, set `ENGINE=direct` and add a provider key (see [Configuration](#8-configuration)).
 
 ## 2. Prebuilt image / compose
 
@@ -109,7 +111,75 @@ just stays off). Tear it down with `docker rm -f agnos-gw agnos-pg && docker net
 > one-command experience use the [one-liner](#1-one-liner-recommended) or the
 > [compose path](#2-prebuilt-image--compose).
 
-## 4. The `agnos` CLI
+## 4. Kubernetes (Helm)
+
+Deploy the gateway (plus a bundled Postgres and Redis) to any Kubernetes cluster with
+the chart in [`deploy/helm/agnos-proxy`](../deploy/helm/agnos-proxy). It generates
+strong secrets on first install and reuses them across upgrades (via `lookup`), so a
+`helm upgrade` never rotates your `GATEWAY_MASTER_KEY`.
+
+```bash
+# from a repo clone - keyless echo engine, bundled Postgres + Redis:
+helm install agnos deploy/helm/agnos-proxy -n agnos --create-namespace
+
+# expose it on your host via an Ingress:
+helm install agnos deploy/helm/agnos-proxy -n agnos --create-namespace \
+  --set ingress.enabled=true,ingress.host=agnos.example.com
+```
+
+Follow the printed NOTES for the URL, then read the generated admin password:
+
+```bash
+kubectl -n agnos get secret agnos-agnos-proxy-secrets \
+  -o jsonpath="{.data.DASHBOARD_ADMIN_PASSWORD}" | base64 -d; echo
+```
+
+Common overrides (`--set key=value` or your own `-f values.yaml`):
+
+| Key | Default | Purpose |
+|---|---|---|
+| `engine` | `echo` | Backend engine: echo, direct, bifrost, litellm, portkey |
+| `previewMode` | `false` | true opens the dashboard without a login wall |
+| `image.tag` | chart appVersion | Pin the gateway image, e.g. `v0.2.0` |
+| `postgres.enabled` | `true` | Bundle Postgres (false + `governanceDbUrl` for an external DB) |
+| `redis.enabled` | `true` | Bundle Redis for distributed rate-limiting |
+| `providerKeys.ANTHROPIC_API_KEY` | (unset) | Provider keys for non-echo engines |
+| `ingress.enabled` / `ingress.host` | `false` / `agnos.local` | Expose via Ingress |
+| `existingSecret` | `""` | Use your own Secret instead of the managed one |
+
+Notes:
+
+- Both the liveness and readiness probes hit `GET /health`. `/health/ready` additionally
+  pings the backend engine and returns 503 on the keyless `echo` engine, so it is
+  deliberately not used for the k8s probes.
+- Preview the rendered manifests without a cluster: `helm template agnos deploy/helm/agnos-proxy`.
+- For production, prefer an external managed Postgres: `--set postgres.enabled=false`
+  and `--set governanceDbUrl=postgresql+asyncpg://user:pass@host:5432/db`.
+
+## 5. CLI via pipx
+
+Install just the `agnos` CLI from PyPI (no Docker needed to install it):
+
+```bash
+pipx install agnos-proxy-llm-gateway
+```
+
+Then generate a `.env` and start the stack:
+
+```bash
+agnos init          # wizard: engine/login/port + strong secrets -> writes .env + compose
+agnos up            # docker compose up -d (pulls the published image)
+agnos open          # open the dashboard in your browser
+```
+
+`agnos init` refuses to overwrite an existing `.env` unless you pass `--force`, and
+`--no-input` keeps secure defaults (engine `echo`, login required, port 8090) for
+scripted installs. The pip-installed `agnos` and the POSIX wrapper below expose the
+same subcommands (`up`, `down`, `logs`, `status`, `update`, `config`, `open`,
+`version`); both shell out to `docker compose`, so Docker is still required to *run*
+the stack.
+
+## 6. The `agnos` CLI
 
 [`bin/agnos`](../bin/agnos) is a thin POSIX-sh wrapper over the quickstart compose stack.
 The one-liner installer drops it into your install directory as `./agnos`. To install it
@@ -125,6 +195,7 @@ a repo clone:
 
 | Command | What it does |
 |---|---|
+| `agnos init` | Create a `.env` (strong secrets) + compose file (`--force` to overwrite) |
 | `agnos up` | Start the stack (pulls the published image) |
 | `agnos down` | Stop the stack |
 | `agnos logs [service]` | Follow logs (all, or one, e.g. `agnos logs gateway`) |
@@ -135,7 +206,7 @@ a repo clone:
 | `agnos version` | Print the gateway version (from `/health`) + CLI version |
 | `agnos help` | Show usage |
 
-## 5. From source (dev)
+## 7. From source (dev)
 
 For hacking on the gateway or dashboard, run it from a clone:
 
@@ -151,7 +222,7 @@ poetry install --with dev
 `typecheck`, `build-dashboard`, `sanity`, ...). Full dev guide:
 [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-## 6. Configuration
+## 8. Configuration
 
 All configuration is environment variables. Start from [`.env.example`](../.env.example)
 and the [README configuration table](../README.md#configuration).

@@ -1,0 +1,115 @@
+# Default values for the agnos-proxy chart.
+# This is a YAML-formatted file. Every value here is documented; override with
+# `--set key=value` or a custom `-f values.yaml`. Secrets are auto-generated when
+# left blank (and PERSIST across `helm upgrade` - see templates/secret.yaml).
+
+# Number of gateway replicas. Distributed rate-limiting across replicas needs Redis
+# (redis.enabled=true, the default) so the replicas share limit state.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/siva010928/agnos-proxy
+  # Image tag. Empty string => "latest" (see _helpers.tpl). Releases are published to
+  # GHCR as :latest and :vX.Y.Z - pin a released version for reproducibility, e.g.:
+  #   tag: "v0.2.0"
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Pull secrets for a private registry (list of {name: my-regcred}). The published
+# image is public, so this is empty by default.
+imagePullSecrets: []
+
+# Override the chart name / fullname used for resource names (both optional).
+nameOverride: ""
+fullnameOverride: ""
+
+# Backend translation engine (the swappable slot). One of:
+#   echo    - deterministic $0 in-process upstream, NO provider keys (safe default)
+#   direct  - in-process adapters (Anthropic/Bedrock/Gemini/OpenAI-compatible)
+#   bifrost - Go translator sidecar (not bundled by this chart)
+#   litellm - LiteLLM proxy translator (not bundled by this chart)
+#   portkey - Portkey OSS gateway translator (not bundled by this chart)
+engine: echo
+
+# Preview mode. false (default) => login is required and the gateway refuses to boot
+# on shipped-default secrets (this chart generates real ones for you). true => the
+# dashboard opens without a login wall (demo / look-around).
+previewMode: false
+
+# Dashboard admin username (the password is a generated/looked-up secret; see below).
+dashboardAdminUser: admin
+
+service:
+  type: ClusterIP
+  port: 8090
+
+ingress:
+  enabled: false
+  className: ""
+  host: agnos.local
+  annotations: {}
+  # TLS blocks are passed straight through to the Ingress spec, e.g.:
+  # tls:
+  #   - secretName: agnos-tls
+  #     hosts:
+  #       - agnos.example.com
+  tls: []
+
+# Gateway container resource requests/limits (sane defaults for a small deployment).
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+# Extra NON-SECRET environment variables merged verbatim into the gateway ConfigMap
+# (e.g. GATEWAY_LOG_LEVEL, GOVERNANCE_MODE, OTEL_EXPORTER_OTLP_ENDPOINT). Put SECRET
+# values under `providerKeys` or an `existingSecret` instead.
+env: {}
+
+# Use a pre-existing Secret (with the gateway secret keys + any provider keys) instead
+# of letting the chart create/manage one. When set, templates/secret.yaml is skipped.
+existingSecret: ""
+
+# Core gateway secrets. Leave BLANK to auto-generate a strong random value on first
+# install; generated values are looked up and reused on `helm upgrade` so they persist.
+# Provide explicit values here (or via --set) to pin them.
+secrets:
+  gatewayMasterKey: ""       # GATEWAY_MASTER_KEY  - envelope-encryption vault key (required)
+  platformAdminToken: ""     # PLATFORM_ADMIN_TOKEN
+  sessionSecret: ""          # SESSION_SECRET       - dashboard session signing
+  dashboardAdminPassword: "" # DASHBOARD_ADMIN_PASSWORD
+
+# Bundled Postgres governance store. Disable to point at an external DB (set
+# governanceDbUrl below). The gateway creates its schema on first boot.
+postgres:
+  enabled: true
+  image: postgres:16
+  user: agnos
+  password: agnos
+  db: agnos_gateway
+  persistence:
+    size: 5Gi
+    # storageClass: ""   # "" => cluster default StorageClass
+
+# Bundled Redis (distributed rate-limiting across gateway replicas). Ephemeral by design.
+redis:
+  enabled: true
+  image: redis:7
+  # url: ""   # external Redis URL used only when redis.enabled=false
+
+# External governance DB URL. When set, OVERRIDES the bundled-Postgres URL, e.g.
+# postgresql+asyncpg://user:pass@host:5432/dbname . Leave blank to use bundled Postgres.
+governanceDbUrl: ""
+
+# Provider API keys (only needed for non-echo engines). Passed through into the managed
+# Secret and injected as env. Only non-empty entries are rendered.
+providerKeys: {}
+  # ANTHROPIC_API_KEY: ""
+  # OPENAI_API_KEY: ""
+  # GEMINI_API_KEY: ""
+  # AWS_ACCESS_KEY_ID: ""
+  # AWS_SECRET_ACCESS_KEY: ""
+  # AWS_REGION_NAME: "us-east-1"

@@ -1,0 +1,59 @@
+name: release-pypi
+
+# Publish the `agnos-proxy-llm-gateway` distribution (which ships the `agnos` CLI
+# console script) to PyPI. Triggered when a GitHub Release is published, plus a
+# manual button for re-runs / dry runs.
+#
+# MAINTAINER ACTION REQUIRED before the first release:
+#   Configure a PyPI *Trusted Publisher* (OpenID Connect) for the project
+#   "agnos-proxy-llm-gateway" so no API token is stored in the repo:
+#     PyPI -> project -> Publishing -> Add a new pending/trusted publisher:
+#       Owner:        siva010928
+#       Repository:   agnos-proxy-oss
+#       Workflow:     release-pypi.yml
+#       Environment:  pypi
+#   (Alternatively, add a PYPI_API_TOKEN secret and pass it to the publish step
+#   with `password: ${{ secrets.PYPI_API_TOKEN }}` instead of Trusted Publishing.)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build distributions
+        run: pipx run build
+      - name: Check metadata
+        run: pipx run twine check dist/*
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI (Trusted Publishing)
+    needs: build
+    runs-on: ubuntu-latest
+    # The `pypi` environment is where the Trusted Publisher is bound (and where you
+    # can add manual approval / protection rules).
+    environment: pypi
+    permissions:
+      # OIDC token for PyPI Trusted Publishing - no stored password/token needed.
+      id-token: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

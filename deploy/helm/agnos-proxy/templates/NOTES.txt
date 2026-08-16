@@ -1,0 +1,58 @@
+Agnos Proxy has been deployed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Engine:       {{ .Values.engine }}
+Preview mode: {{ .Values.previewMode }}{{ if not .Values.previewMode }}  (login required){{ else }}  (dashboard open, no login wall){{ end }}
+Image:        {{ include "agnos-proxy.image" . }}
+
+1. Wait for the gateway to become ready (probes hit GET /health):
+
+   kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "agnos-proxy.fullname" . }}
+
+2. Reach the dashboard / API:
+{{- if .Values.ingress.enabled }}
+
+   http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/
+{{- else if eq .Values.service.type "ClusterIP" }}
+
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "agnos-proxy.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+   # then open http://localhost:{{ .Values.service.port }}/
+{{- else if eq .Values.service.type "NodePort" }}
+
+   export NODE_PORT=$(kubectl -n {{ .Release.Namespace }} get svc {{ include "agnos-proxy.fullname" . }} -o jsonpath="{.spec.ports[0].nodePort}")
+   export NODE_IP=$(kubectl get nodes -o jsonpath="{.items[0].status.addresses[0].address}")
+   # then open http://$NODE_IP:$NODE_PORT/
+{{- else if eq .Values.service.type "LoadBalancer" }}
+
+   # Wait for the external IP:
+   kubectl -n {{ .Release.Namespace }} get svc {{ include "agnos-proxy.fullname" . }} -w
+{{- end }}
+
+3. Admin login:
+
+   user: {{ .Values.dashboardAdminUser | default "admin" }}
+{{- if .Values.existingSecret }}
+   password: read DASHBOARD_ADMIN_PASSWORD from your existing secret "{{ .Values.existingSecret }}".
+{{- else }}
+   password (generated on first install; stable across upgrades):
+
+   kubectl -n {{ .Release.Namespace }} get secret {{ include "agnos-proxy.secretName" . }} \
+     -o jsonpath="{.data.DASHBOARD_ADMIN_PASSWORD}" | base64 -d; echo
+{{- end }}
+
+4. Call it like OpenAI (send a workspace key, never a provider key):
+
+   curl http://localhost:{{ .Values.service.port }}/v1/chat/completions \
+     -H "Authorization: Bearer gw-key-primary-001" \
+     -H "Content-Type: application/json" \
+     -d '{"model":"default","messages":[{"role":"user","content":"hello"}]}'
+
+{{- if not .Values.postgres.enabled }}
+
+NOTE: postgres.enabled=false - the gateway is using governanceDbUrl="{{ .Values.governanceDbUrl }}".
+      It must be reachable or the gateway will fail to start.
+{{- end }}
+{{- if eq .Values.engine "echo" }}
+
+The keyless "echo" engine is active ($0, deterministic). Set engine=direct (and add
+providerKeys) or a sidecar engine for real traffic - see docs/ENGINES.md.
+{{- end }}

@@ -11,6 +11,12 @@ requires-python = ">=3.12,<4.0"
 # unchanged while clearing the Poetry 2.x deprecation warnings for the metadata above.
 dynamic = ["dependencies"]
 
+# Console entry point: `pipx install agnos-proxy-llm-gateway` exposes the `agnos`
+# CLI (gateway/cli.py). It is stdlib-only and does NOT import the gateway runtime,
+# so the CLI installs and runs without Docker or the app's heavy dependencies.
+[project.scripts]
+agnos = "gateway.cli:main"
+
 [tool.poetry]
 packages = [{ include = "gateway" }]
 
