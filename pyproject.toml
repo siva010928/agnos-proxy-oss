@@ -24,10 +24,7 @@ packages = [{ include = "gateway" }]
 python = "^3.12"
 
 # Web framework
-# fastapi kept open to <1.0 (not ^0.115) so poetry can pull a release whose starlette
-# floor allows the patched starlette (>=1.3.1 clears the StaticFiles SSRF + form-limit
-# advisories). poetry.lock pins the exact tested versions.
-fastapi = ">=0.115,<1.0"
+fastapi = "^0.115.0"
 # Ceiling kept open (<1.0, not ^0.32) so a fresh `pip install` can co-resolve with
 # transitive deps that require newer uvicorn (e.g. pydantic-ai -> fastmcp-slim needs
 # uvicorn>=0.35). poetry.lock still pins the exact tested version for Docker builds.
