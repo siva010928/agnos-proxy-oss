@@ -28,7 +28,7 @@ fastapi = "^0.115.0"
 uvicorn = { extras = ["standard"], version = "^0.32.0" }
 
 # OpenAI SDK - request validation + response/chunk Pydantic types
-openai = "^1.55.0"
+openai = "^3.0.0"
 
 # Persistence: Postgres (default) + SQLite (fallback)
 sqlalchemy = { extras = ["asyncio"], version = "^2.0.0" } # 2.0.1
