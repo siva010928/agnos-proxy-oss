@@ -19,11 +19,17 @@ attribution and full observability - for **any** provider, behind **any** transl
 > ### Own the control plane. Swap the translator.
 > The governance boundary and the **encrypted key vault stay in your own infrastructure**. The
 > provider-translation layer is a **swappable, stateless commodity** in a fixed slot: plug in
-> **Bifrost**, **LiteLLM**, **Portkey**, or the built-in **Direct** engine - and swap them **per
-> provider**, live, with one config change. A CVE in a translation engine becomes a *quarantine &
-> evacuate* config flip, not a fleet rebuild.
+> **Bifrost**, **LiteLLM**, **Portkey**, the built-in **Direct** engine, or **any OpenAI-compatible
+> gateway** - and swap them **per provider**, live, with one config change. We *contain* the engines,
+> we do not compete with them.
+>
+> That is the point: the gateway market never stops moving. Prices change, a provider you need is
+> unsupported, or a gateway has a security incident. With Agnos you never bet on one gateway again -
+> keep the control plane, swap the engine underneath, and **never migrate your app again**. When a new
+> gateway launches, we contain that too.
 
-MIT-licensed. Self-host the whole thing. **[Read the docs &rarr;](https://agnos-llm-gateway.site/app/docs)**
+MIT-licensed and **free forever to self-host**. **[Read the docs &rarr;](https://agnos-llm-gateway.site/app/docs)**
+&middot; **[Pricing](https://agnos-llm-gateway.site/app/pricing)** (managed cloud coming soon)
 &middot; **Try the [live demo](https://agnos-llm-gateway.site)** - a prototype playground (no sign-up, no
 keys, deterministic responses).
 
