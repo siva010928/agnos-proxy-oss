@@ -112,7 +112,8 @@ class Component(Base):
 class WorkspaceProviderConfig(Base):
     """Per-workspace provider credentials (encrypted) + non-secret config.
 
-    Source of truth for credentials. Synced into Bifrost as a managed key.
+    The sole source of truth for provider credentials. The decrypted key is
+    injected per request; no engine (Bifrost/LiteLLM/Portkey) keeps a copy.
     """
     __tablename__ = "workspace_provider_configs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

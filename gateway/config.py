@@ -44,9 +44,12 @@ class Settings:
     # Portkey OSS gateway (stateless): boundary injects the provider key per request
     # via x-portkey-provider + Authorization / x-portkey-aws-* headers. Holds nothing.
     portkey_url: str = os.getenv("PORTKEY_URL", "http://localhost:8787")
-    # LiteLLM proxy used as a pure translator ENGINE (distinct from the CVE lab on
-    # :4000). It is stateful - it holds the provider keys we configure into it - so a
-    # compromise of THIS engine leaks those keys (the stateful-translator contrast).
+    # LiteLLM proxy used as a STATELESS commodity translator ENGINE. It stores no
+    # provider keys (no database_url / no store_model_in_db - see
+    # infra/litellm-engine/config.yaml); the boundary injects the decrypted key PER
+    # REQUEST via LiteLLM "clientside credentials". A compromise of this engine
+    # exposes only the traffic in flight during the window - there is no key store to
+    # dump (same property as the Portkey/Bifrost stateless + owned Direct engines).
     litellm_engine_url: str = os.getenv("LITELLM_ENGINE_URL", "http://localhost:4100")
     litellm_engine_key: str = os.getenv("LITELLM_ENGINE_KEY", "sk-1234")
     # Base URL of the Jaeger UI for building deep-links to a request's trace. Differs

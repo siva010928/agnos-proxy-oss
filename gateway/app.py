@@ -156,9 +156,9 @@ async def lifespan(app: FastAPI):
             await _bifrost_reconcile_bg()
         else:
             _asyncio.create_task(_bifrost_reconcile_bg())
-    # Reconcile workspace creds → LiteLLM-engine models (stateful commodity engine).
-    # Runs regardless of the default engine so a live swap/evacuate TO litellm finds
-    # its models already synced. Best-effort + background (never blocks readiness).
+    # Legacy LiteLLM key/model reconcile. The LiteLLM engine is now STATELESS -
+    # keys are injected per request (no store_model_in_db), so litellm_sync is a
+    # retired no-op; this call is kept only so existing startup wiring doesn't break.
     import asyncio as _aio_ll
 
     async def _litellm_reconcile_bg():

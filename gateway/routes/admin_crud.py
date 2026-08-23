@@ -314,7 +314,7 @@ async def add_provider(workspace_id: str, body: ProviderIn):
     except Exception as exc:  # noqa: BLE001
         await _audit("provider.upsert.bifrost_sync_skipped", f"{workspace_id}/{body.provider}",
                      error=str(exc)[:200])
-    try:  # keep the stateful LiteLLM engine's store in sync too (best-effort)
+    try:  # legacy LiteLLM sync - retired no-op (engine is stateless; keeps no keys)
         from gateway import litellm_sync
         await litellm_sync.sync_provider_row(cfg_id)
     except Exception:  # noqa: BLE001
@@ -942,8 +942,8 @@ async def delete_model_catalog(provider: str, model_id: str):
 # ───────────────────────── Engine swap (proof-of-swap) ─────────────────────────
 
 async def _maybe_sync_engine(name: str) -> None:
-    """When a stateful engine becomes active, make sure its store is synced from our
-    vault. LiteLLM: reconcile models. (Bifrost self-persists + reconciles at startup.)"""
+    """Legacy hook kept for callers. All engines are STATELESS (they keep no provider
+    keys), so litellm_sync / bifrost sync are retired no-ops and this does nothing."""
     if name == "litellm":
         try:
             from gateway import litellm_sync
@@ -969,13 +969,12 @@ async def engine_reconcile():
 
 
 async def _bg_reconcile(name: str) -> None:
-    """Sync our vault -> a stateful engine's key store in the BACKGROUND, logging
-    progress into the live tail. Keeps the swap itself instant (fixes the slow
-    live-demo switch to LiteLLM); the engine's own DB persists across activations."""
+    """Legacy background reconcile. Engines are stateless (no key store to sync), so
+    this is effectively a no-op; kept only to preserve the swap's live-tail logging."""
     import time as _t
     from gateway.core import log_buffer
-    log_buffer.record(f"reconcile: syncing our encrypted vault -> {name} key store "
-                      f"(store_model_in_db) ...", source="engine.swap")
+    log_buffer.record(f"reconcile: {name} engine is stateless - no key store to sync "
+                      f"(keys are injected per request)", source="engine.swap")
     t0 = _t.monotonic()
     try:
         await _maybe_sync_engine(name)
@@ -1022,7 +1021,7 @@ async def set_engine(body: EngineIn):
     log_buffer.record(f"runtime._engine = {rt._engine.__class__.__name__}  "
                       f"(auth/guardrails/budgets/audit boundary unchanged)", source="engine.swap")
 
-    stateful = name in ("litellm", "bifrost")
+    stateful = False  # all engines are stateless (they keep no provider keys)
     reconcile = "none"
     if name == "litellm":            # only LiteLLM needs the slow vault->store sync
         reconcile = "background"

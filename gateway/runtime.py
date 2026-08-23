@@ -30,7 +30,7 @@ def engine_by_name(name: str) -> BackendEngine:
         from gateway.engines.echo_engine import EchoEngine  # deterministic in-process upstream
         return EchoEngine()
     if name == "litellm":
-        from gateway.engines.litellm_engine import LiteLLMEngine  # stateful commodity translator
+        from gateway.engines.litellm_engine import LiteLLMEngine  # stateless commodity translator (holds no keys)
         return LiteLLMEngine()
     if name == "portkey":
         from gateway.engines.portkey_engine import PortkeyEngine  # STATELESS commodity translator
@@ -60,8 +60,8 @@ def select_engine(overrides: dict | None, provider: str) -> BackendEngine:
     value for a provider can be:
 
         None / ""            → the global default engine (engine())
-        "bifrost"            → the Bifrost commodity translator (stateful)
-        "litellm"            → the LiteLLM commodity translator (stateful)
+        "bifrost"            → the Bifrost commodity translator (stateless; holds no keys)
+        "litellm"            → the LiteLLM commodity translator (stateless; holds no keys)
         "portkey"            → the Portkey commodity translator (STATELESS)
         "direct"             → our owned DirectEngine (in-process, holds nothing)
         int/float N          → CANARY: route ~N% of this provider's calls to our
