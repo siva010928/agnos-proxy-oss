@@ -9,7 +9,7 @@
 [![Docs](https://img.shields.io/badge/docs-agnos--llm--gateway.site-E8604C.svg)](https://agnos-llm-gateway.site/app/docs)
 [![PyPI](https://img.shields.io/pypi/v/agnos-proxy-llm-gateway?color=8B5CF6&label=pypi)](https://pypi.org/project/agnos-proxy-llm-gateway/)
 
-**The gateway-agnostic control plane for LLM routing, cost-tracking and observability.**
+**Agnos is a self-hosted, open-source, gateway-agnostic AI and LLM gateway - a control plane for LLM routing, cost-tracking, guardrails and observability.**
 
 Agnos Proxy is an **OpenAI-compatible governance proxy** that sits between your apps and the model
 providers. Point any app at it (change one `base_url`, send **one workspace key**) and it inherits
@@ -32,6 +32,10 @@ MIT-licensed and **free forever to self-host**. **[Read the docs &rarr;](https:/
 &middot; **[Pricing](https://agnos-llm-gateway.site/app/pricing)** (managed cloud coming soon)
 &middot; **Try the [live demo](https://agnos-llm-gateway.site)** - a prototype playground (no sign-up, no
 keys, deterministic responses).
+
+**A self-hosted alternative to [LiteLLM](https://github.com/BerriAI/litellm), [Bifrost](https://github.com/maximhq/bifrost), Portkey and Kong AI Gateway** - model-agnostic and OpenAI-compatible, Agnos *contains* the gateway you already run as a swappable, stateless translator, so you **bring your own control plane** instead of adopting theirs.
+
+**Read more:** [Own your LLM control plane (blog)](https://agnos-llm-gateway.site/app/blog/own-your-llm-control-plane) &middot; [Research: where LLM-gateway vulnerabilities live](https://agnos-llm-gateway.site/app/research) &middot; [LiteLLM vs Bifrost vs Agnos - comparison](https://agnos-llm-gateway.site/app/compare)
 
 > **Status: pre-1.0.** Fully usable and self-hostable today, but public APIs, config keys and the
 > dashboard may still change before v1.0 - pin a [release](https://github.com/siva010928/agnos-proxy-oss/releases) for stability.
