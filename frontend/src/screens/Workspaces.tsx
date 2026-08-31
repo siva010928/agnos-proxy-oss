@@ -411,8 +411,7 @@ export function Workspaces() {
         message={
           <>
             <span className="text-warn font-medium">Permanently deletes this workspace and everything inside it</span> -
-            provider credentials, API keys, components, routing aliases, and guardrail rules/profiles scoped to it
-            (plus its Bifrost managed keys).
+            provider credentials, API keys, components, routing aliases, and guardrail rules/profiles scoped to it.
             {delWs && Object.keys(delWs.chat_models || {}).length > 0 && (
               <div className="mt-2 text-[11.5px] text-muted">
                 Aliases removed: {Object.keys(delWs.chat_models).map((a) => <span key={a} className="mono text-gray-300">{a} </span>)}

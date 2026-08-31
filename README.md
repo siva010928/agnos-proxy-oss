@@ -24,12 +24,11 @@ attribution and full observability - for **any** provider, behind **any** transl
 > we do not compete with them.
 >
 > That is the point: the gateway market never stops moving. Prices change, a provider you need is
-> unsupported, or a gateway has a security incident. With Agnos you never bet on one gateway again -
-> keep the control plane, swap the engine underneath, and **never migrate your app again**. When a new
-> gateway launches, we contain that too.
+> unsupported, or a gateway has a security incident. With Agnos you avoid betting everything on one
+> gateway - keep the control plane and swap the engine underneath, so an engine change rarely forces
+> an app migration. When a new gateway launches, it can be added as another engine behind the same boundary.
 
-MIT-licensed and **free forever to self-host**. **[Read the docs &rarr;](https://agnos-llm-gateway.site/app/docs)**
-&middot; **[Pricing](https://agnos-llm-gateway.site/app/pricing)** (managed cloud coming soon)
+**Free and open source (MIT), forever - no paid tier, no managed upsell, no CLA.** **[Read the docs &rarr;](https://agnos-llm-gateway.site/app/docs)**
 &middot; **Try the [live demo](https://agnos-llm-gateway.site)** - a prototype playground (no sign-up, no
 keys, deterministic responses).
 
@@ -60,7 +59,7 @@ keys, deterministic responses).
 - [Testing](#testing)
 - [Security model](#security-model)
 - [Project layout](#project-layout)
-- [Editions](#editions)
+- [Self-hosting & the demo playground](#self-hosting--the-demo-playground)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -76,24 +75,29 @@ Every app is becoming an LLM consumer, so teams put a gateway in front. That gat
 - **Data plane (a commodity):** translating the OpenAI request shape into each provider's shape and
   back. It's fast-moving third-party code and the largest attack surface.
 
-Most popular gateways **fuse both jobs into one process** - so untrusted, fast-moving translation
-code runs next to your key store, and a single flaw in the gateway process can reach every key. This
-is not hypothetical: LiteLLM (a leading OSS gateway, which Agnos Proxy also supports as a *contained*
-engine) disclosed a **pre-auth SQL injection in its API-key-verification path**
+Most popular gateways, **in their common deployment, fuse both jobs into one process** - so untrusted,
+fast-moving translation code runs next to a resident key store, and a single flaw in the gateway
+process can reach every stored key. This is not hypothetical: LiteLLM (a leading OSS gateway, which
+Agnos Proxy also supports as a *contained* engine) disclosed a **pre-auth SQL injection in its
+API-key-verification path**
 ([CVE-2026-42208](https://github.com/BerriAI/litellm/security/advisories/GHSA-r75f-5x8p-qvmc)), an
 **admin file-read** via the connection-test endpoint
 ([CVE-2026-59819](https://nvd.nist.gov/vuln/detail/CVE-2026-59819)), and a **low-privilege-user ->
 admin -> remote code execution** chain
 ([CVE-2026-47101/47102/40217](https://www.obsidiansecurity.com/blog/litellm-privilege-escalation-rce),
 CVSS 9.9). When the gateway also *holds the keys*, such a compromise reaches the master key, the salt
-that decrypts stored provider keys, and every provider credential at once. The other common shape
+that decrypts stored provider keys, and every provider credential at once. (These gateways do offer
+keyless per-request modes - LiteLLM's clientside credentials, Bifrost's direct keys - which is exactly
+the mode Agnos drives; the risk above is the common key-storing deployment.) The other common shape
 **hosts the control plane in a vendor cloud**, so your keys and prompts leave your network.
 
 Agnos Proxy takes the third path: **keep the control plane + vault in your own infrastructure, and
 treat the engine as a disposable, stateless adapter behind a fixed port** - so a breached engine
-reaches at most **one in-flight key**, never the vault. Same binary (e.g. LiteLLM), opposite blast
-radius: run it as your whole gateway and one bug takes everything; run it as our adapter and worst
-case is a single in-flight key.
+reaches at most **one in-flight key**, never the vault. Same binary (e.g. LiteLLM): run it as your
+whole gateway with a resident key store and one bug can reach every stored key; run it as an Agnos
+engine (its keyless per-request mode, driven by our vault) and the worst case is a single in-flight
+key. This is a smaller blast radius and faster recovery - not invulnerability (Agnos itself holds the
+vault and must be secured too).
 
 <details>
 <summary><strong>References</strong> - sources for the claims above</summary>
@@ -245,10 +249,14 @@ and configuration.
 git clone https://github.com/siva010928/agnos-proxy-oss.git
 cd agnos-proxy-oss
 cp .env.example .env          # set GATEWAY_MASTER_KEY (any passphrase) + provider keys
-docker compose up -d          # gateway + postgres + redis + kafka + bifrost + observability
+docker compose -f deploy/docker-compose.quickstart.yml up -d   # gateway + infra (postgres, redis, kafka, bifrost, observability)
 ```
 
 Open the dashboard at **http://localhost:8090/** (in `PREVIEW_MODE` it opens without a login wall).
+
+> The **root** `docker-compose.yml` is the local **infra** stack only (no gateway service); it's for
+> `./scripts/start_local.sh`, which runs the gateway from source. For a one-command run of everything,
+> use `deploy/docker-compose.quickstart.yml` above (or the `agnos` CLI - see [docs/INSTALL.md](docs/INSTALL.md)).
 
 **Prefer a prebuilt image?** Pull the published multi-arch gateway from GHCR:
 
@@ -430,14 +438,20 @@ bench/              latency benchmark + results
 tests/              pytest suite (runs on ENGINE=echo)
 ```
 
-## Editions
+## Self-hosting & the demo playground
 
 Agnos Proxy is **MIT-licensed** and fully self-hostable - the entire working product is in this
-repository. A hosted, interactive playground (guided walkthrough) is available at
-**[agnos-llm-gateway.site](https://agnos-llm-gateway.site)** in **prototype mode** (no real keys or
-provider calls) for people who want to click around before self-hosting.
+repository. There is **no paid edition, no managed tier and no "enterprise" build**: what you see here
+is the whole thing, and it stays that way. A hosted, interactive playground (guided walkthrough) is
+available at **[agnos-llm-gateway.site](https://agnos-llm-gateway.site)** in **prototype mode** (no real
+keys or provider calls) for people who want to click around before self-hosting.
 
 ## Contributing
+
+**Agnos is free and open source (MIT), forever - there is no paid tier and no CLA. Every contribution
+benefits everyone who self-hosts it.** The value of this project lives in a control plane you own, so
+it grows the way infrastructure should: in the open, extended a little at a time by the people who run
+it. Fork it, run it, and send improvements back so the next team starts further ahead.
 
 Contributions are welcome - new engine adapters, providers, guardrails, and dashboard views
 especially. Start with **[CONTRIBUTING.md](CONTRIBUTING.md)** (dev setup, tests, PR flow) and the
@@ -446,6 +460,18 @@ especially. Start with **[CONTRIBUTING.md](CONTRIBUTING.md)** (dev setup, tests,
 - Dev quickstart: `poetry install --with dev` -> `./scripts/start_local.sh` -> `poetry run pytest -m "not live and not integration"`
 - Adding an engine: implement the `BackendEngine` port and pass `tests/test_anti_coupling.py` (guide: [docs/ENGINES.md](docs/ENGINES.md#add-a-new-engine-adapter-any-oss-model-gateway))
 - Be excellent to each other: [Code of Conduct](CODE_OF_CONDUCT.md)
+
+### Where we could use help (roadmap)
+
+The direction is to **slowly extend the control plane** - richer governance while translation stays a
+swappable commodity. Good places to jump in:
+
+- **More engine adapters** behind the `BackendEngine` port (e.g. Ollama, vLLM, more OpenAI-compatible gateways).
+- **More provider entries** in the catalog, and **more guardrail detectors / CEL examples**.
+- **Governance depth**: budgets, approvals, policy, richer cost analytics.
+- **Docs, examples and framework integrations** so the next self-hoster starts faster.
+
+Open an issue to propose something, or pick up a [`good first issue`](https://github.com/siva010928/agnos-proxy-oss/labels/good%20first%20issue).
 
 ## Community & support
 

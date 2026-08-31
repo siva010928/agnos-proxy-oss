@@ -5,11 +5,11 @@
 > nothing else. Credentials, policy, routing, budgets, guardrails and attribution
 > all live at the boundary, never in the component.
 >
-> **Proven in production:** the `eshop-ecommerce` workspace has served **~65 million
-> input tokens across ~1,025 governed spec-generation calls** on Anthropic + Gemini -
-> every call authenticated, guard-railed, attributed and cost-accounted at the boundary.
+> **Real-world usage:** in one internal workspace (`eshop-ecommerce`) Agnos has governed
+> **~1,025 calls (~65M input tokens)** on Anthropic + Gemini - each authenticated,
+> guard-railed, attributed and cost-accounted at the boundary.
 
-I evaluated several designs and shipped the thin proxy. This document is the
+We evaluated several designs and shipped the thin proxy. This document is the
 side-by-side case for *why*, and exactly how a request flows. All diagrams render
 natively on GitHub (Mermaid).
 
@@ -87,7 +87,7 @@ flowchart LR
   bus --> obs["billing · audit · analytics · SSE · Prometheus · OTel"]
 ```
 
-Everything except provider translation runs in my layer (DB + governance bus), so
+Everything except provider translation runs in our layer (DB + governance bus), so
 an engine swap can never remove it.
 
 ---
@@ -106,7 +106,7 @@ sequenceDiagram
   G->>G: input guardrails (CEL + detectors)
   G->>G: budget + rate-limit (client/workspace/user)
   G->>G: resolve route + per-request timeout
-  G->>E: OpenAI request (engine-encapsulated managed key)
+  G->>E: OpenAI request (provider key injected per request, in flight)
   E->>P: provider-native call
   alt provider ok
     P-->>E: completion
@@ -123,12 +123,12 @@ sequenceDiagram
 
 ---
 
-## 5. The engine-swap superpower (incremental, per-provider, zero component change)
+## 5. Incremental, per-provider engine swaps (zero component change)
 
 The piece that translates to each provider is a **swappable engine behind the
 boundary**. If the default engine (Bifrost, or a Pydantic-AI-style runtime) ever
-loses trust - a CVE, an outage, or just a strategic decision to own it - I migrate
-to my own **DirectEngine** adapter **one provider at a time**. Because it is a
+loses trust - a CVE, an outage, or just a strategic decision to own it - we migrate
+to the built-in **DirectEngine** adapter **one provider at a time**. Because it is a
 proxy and **not an SDK**, components never bump a version: at most the URL path
 moves `v1 -> v2`; everything else stays fixed. Only the gateway proxy evolves.
 
@@ -138,11 +138,11 @@ flowchart TB
     g1["Gateway"] -->|all providers| bif1["BifrostEngine"]
   end
   subgraph M["Mid-migration - per provider, components untouched"]
-    g2["Gateway"] -->|anthropic| dir2["DirectEngine (mine)"]
+    g2["Gateway"] -->|anthropic| dir2["DirectEngine (built-in)"]
     g2 -->|bedrock · gemini| bif2["BifrostEngine"]
   end
   subgraph F["Fully owned - own the translation"]
-    g3["Gateway"] -->|all providers| dir3["DirectEngine (mine)"]
+    g3["Gateway"] -->|all providers| dir3["DirectEngine (built-in)"]
   end
   T --> M --> F
 ```
@@ -151,7 +151,7 @@ flowchart TB
 flowchart LR
   comp["Component<br/>(workspace key only)"] --> gw["Agnos Proxy<br/>governance core"]
   gw -->|default| bif["BifrostEngine"]
-  gw -. swap live .-> dir["DirectEngine (mine)"]
+  gw -. swap live .-> dir["DirectEngine (built-in)"]
   gw -. zero-cost tests .-> echo["EchoEngine"]
   bif --> prov["providers"]
   dir --> prov

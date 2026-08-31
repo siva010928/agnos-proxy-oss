@@ -1,6 +1,6 @@
 """Admin write endpoints - full CRUD for workspaces, providers, aliases, keys,
-quotas, budgets, guardrails. Credentials are encrypted at rest and synced to
-Bifrost (create/rotate/delete) so the managed-key lifecycle stays consistent."""
+quotas, budgets, guardrails. Credentials are encrypted at rest in the vault and
+injected per request; engines store no keys."""
 from __future__ import annotations
 
 import secrets as _secrets

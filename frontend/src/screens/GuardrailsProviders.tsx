@@ -1,7 +1,7 @@
 // Guardrails → Providers page.
 // Card catalog of detector types + per-provider config forms.
 // Implemented: Custom Regex (native), Secrets Detection (native, gitleaks),
-// AWS Bedrock Guardrails (live). Scaffolded: Azure Content Safety. Coming Soon:
+// AWS Bedrock Guardrails (live). Scaffolded: Azure Content Safety. Not yet implemented:
 // Google Model Armor, Patronus, CrowdStrike, GraySwan.
 
 import { useEffect, useMemo, useState } from 'react'

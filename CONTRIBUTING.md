@@ -4,6 +4,11 @@ Thanks for your interest in improving Agnos Proxy. This gateway is built to be
 extended - new engine adapters, providers, guardrails, and dashboard views are
 exactly the kind of contribution we want. This guide gets you from clone to merged PR.
 
+**Agnos is free and open source (MIT), forever - there is no paid tier and no CLA.** The value
+of this project lives in a control plane you run and own, so it grows the way infrastructure should:
+in the open, extended a little at a time by the people who self-host it. Every contribution benefits
+everyone who runs it - including you.
+
 By participating you agree to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## TL;DR

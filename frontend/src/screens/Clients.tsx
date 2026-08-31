@@ -274,7 +274,7 @@ function ClientEditor({ edit, onClose, onSaved }:
         <Field label="Notes" hint="Internal notes (not exposed to API consumers).">
           <input className="input text-xs" value={notes}
                  onChange={(e) => setNotes(e.target.value)}
-                 placeholder="Enterprise tier; signed 2026-Q1" data-testid="client-notes" />
+                 placeholder="e.g. Payments team; onboarded 2026-Q1" data-testid="client-notes" />
         </Field>
       </div>
     </Modal>

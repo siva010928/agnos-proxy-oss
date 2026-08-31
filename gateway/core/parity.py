@@ -17,7 +17,7 @@ _ROWS: list[tuple[str, str, str, str, str]] = [
     ("Identity", "app passes ids in code", "API key → flat tenant",
      "workspace JWT or API key → workspace + user + component (server-derived)", "built"),
     ("Per-(workspace,component) credentials", "creds in each component process", "one key set per gateway",
-     "encrypted per workspace×component, synced to engine managed keys", "built"),
+     "encrypted per workspace×component in the vault; injected per request (engines hold none)", "built"),
     ("Credential isolation", "keys live in every component", "keys in gateway",
      "keys only in gateway (encrypted) + isolated engine; never in components", "built"),
     ("Governance emission", "component calls an emit/log function", "basic request logs",

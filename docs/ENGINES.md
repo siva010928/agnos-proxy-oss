@@ -169,7 +169,7 @@ automatically rides LiteLLM, while everything else stays on Bifrost.
 > A regulated bank's workspace is mandated onto **IBM watsonx**; a data team's
 > workspace standardizes on **Databricks**; everyone else uses Anthropic + Gemini.
 > Set `{"watsonx":"litellm","databricks":"litellm"}` and leave the default at
-> `bifrost`. Now watsonx/Databricks calls transparently use LiteLLM (the only engine
+> `bifrost`. Now watsonx/Databricks calls transparently use LiteLLM (the only bundled engine
 > that speaks them), the rest stay on fast Bifrost, and you can canary a move of
 > Anthropic onto your owned Direct engine with `{"anthropic":10}` → `50` → `100`.
 

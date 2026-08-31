@@ -385,8 +385,8 @@ export function Providers() {
         title={`Delete provider '${confirmDel?.provider}'?`}
         message={
           <>
-            The encrypted credential is removed and the corresponding Bifrost managed key is
-            deleted. <span className="text-warn">Any chat alias still pointing at this provider will start failing.</span>
+            The encrypted credential is removed from the vault.
+            <span className="text-warn">Any chat alias still pointing at this provider will start failing.</span>
           </>
         }
         identifier={confirmDel ? `provider '${confirmDel.provider}' in workspace '${selected}'` : null}

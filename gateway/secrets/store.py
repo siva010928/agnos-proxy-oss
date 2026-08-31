@@ -2,8 +2,9 @@
 
 The ONLY secret loaded at startup is GATEWAY_MASTER_KEY. Per-workspace provider
 credentials are encrypted with Fernet under that master key and stored in our
-Postgres. They are decrypted on demand (per request / on Bifrost sync) and
-cached briefly. This is the source of truth; Bifrost holds only a synced copy.
+Postgres. They are decrypted on demand (per request) and cached briefly. This
+vault is the sole source of truth; engines hold no copy - the provider key is
+injected per request, in flight.
 """
 from __future__ import annotations
 
