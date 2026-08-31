@@ -11,7 +11,7 @@ We also pick engines by CAPABILITY, not just security, and can run MORE THAN ONE
 at a time via per-provider routing (runtime.select_engine keys off provider):
   - litellm : unmatched provider coverage (100+, incl. watsonx / databricks /
               snowflake / sagemaker that Bifrost does not support)
-  - bifrost : blazing-fast Go translator (~11 microsecond overhead)
+  - bifrost : very fast Go translator
   - portkey : clean stateless default
   - direct  : owned, in-process, zero third-party
 
@@ -33,8 +33,8 @@ ENGINE_META: dict[str, dict] = {
         "label": "Bifrost", "vendor": "Maxim", "runtime": "Go", "license": "Apache-2.0",
         "stateful": False, "holds_provider_keys": False, "owned": False,
         "blast_radius": "low",
-        "capability": "blazing-fast Go translator (~11us overhead)",
-        "tagline": "STATELESS translator (direct-key) · blazing-fast (Go)",
+        "capability": "very fast Go translator",
+        "tagline": "STATELESS translator (direct-key) · very fast (Go)",
     },
     "portkey": {
         "label": "Portkey", "vendor": "Portkey", "runtime": "TypeScript/Node", "license": "MIT",
