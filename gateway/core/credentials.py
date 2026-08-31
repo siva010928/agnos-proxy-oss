@@ -33,11 +33,18 @@ _DB_TIMEOUT = 2.0
 
 
 def invalidate(workspace_id: str | None = None) -> None:
+    """Drop cached decrypted credentials so a rotated/updated/deleted provider key
+    takes effect on the next request. Clears BOTH the TTL cache and the long-lived
+    fail-open stale copy (otherwise a rotate coinciding with a DB outage could still
+    serve the old key). Called by the provider add/update/delete admin routes."""
     if workspace_id is None:
         _CACHE.clear()
+        _STALE.clear()
     else:
         for k in [k for k in _CACHE if k[0] == workspace_id]:
             _CACHE.pop(k, None)
+        for k in [k for k in _STALE if k[0] == workspace_id]:
+            _STALE.pop(k, None)
 
 
 async def _load(workspace_id: str, provider: str) -> ProviderCredential | None:

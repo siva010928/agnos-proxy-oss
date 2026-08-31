@@ -184,8 +184,12 @@ services:
     container_name: agnos-proxy-portkey
     restart: unless-stopped
 
-  # ── Commodity translator: LiteLLM proxy (STATEFUL) ── holds provider keys in
-  # its OWN Postgres, synced from our vault (the stateful-engine contrast).
+  # ── Commodity translator: LiteLLM proxy (STATELESS re: provider keys) ──
+  # Provider keys are NOT stored here. Each call uses LiteLLM "clientside
+  # credentials": the Agnos boundary injects the decrypted provider key per
+  # request (see infra/litellm-engine/config.yaml - no store_model_in_db, no
+  # provider keys). The companion Postgres below holds only LiteLLM's OWN
+  # operational data (its virtual keys / spend), never provider credentials.
   litellm-engine-db:
     image: postgres:16
     container_name: agnos-proxy-litellm-engine-db

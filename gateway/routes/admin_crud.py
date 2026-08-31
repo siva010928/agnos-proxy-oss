@@ -16,6 +16,7 @@ from gateway.bifrost import sync as bsync
 from gateway.config import settings
 from gateway.core import admin_validation as av
 from gateway.core.auth import hash_key, invalidate_cache
+from gateway.core.credentials import invalidate as invalidate_credentials
 from gateway.core.security import require_admin
 from gateway.db.database import async_session
 from gateway.db.models import (
@@ -320,6 +321,7 @@ async def add_provider(workspace_id: str, body: ProviderIn):
     except Exception:  # noqa: BLE001
         pass
     await _audit("provider.upsert", f"{workspace_id}/{body.provider}", bifrost_key=name)
+    invalidate_credentials(workspace_id)  # flush decrypted-cred cache so a rotated key is used at once
     return {"ok": True, "bifrost_key_name": name, "bifrost_key_id": kid}
 
 
@@ -360,6 +362,7 @@ async def update_provider_config(workspace_id: str, provider: str, body: dict):
     except Exception:  # noqa: BLE001
         pass
     await _audit("provider.config_update", f"{workspace_id}/{provider}", bifrost_key=name)
+    invalidate_credentials(workspace_id)  # flush decrypted-cred cache so new config is used at once
     return {"ok": True, "bifrost_key_name": name, "bifrost_key_id": kid}
 
 
@@ -384,6 +387,7 @@ async def delete_provider(workspace_id: str, provider: str):
         await litellm_sync.delete_provider_models(workspace_id, provider)
     except Exception:  # noqa: BLE001
         pass
+    invalidate_credentials(workspace_id)  # flush decrypted-cred cache for the removed provider
     return {"ok": True}
 
 

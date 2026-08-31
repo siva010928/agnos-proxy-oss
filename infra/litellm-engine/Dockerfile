@@ -1,10 +1,13 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# LiteLLM proxy as a commodity translation ENGINE (stateless; keys injected per request).
+# LiteLLM proxy as a commodity translation ENGINE
+# (stateless re: provider keys; the key is injected per request).
 #
-# Built from python:3.11-slim (multi-arch) - the prebuilt ghcr image is amd64-only
-# and SIGILLs under Apple-Silicon emulation. Includes Prisma so store_model_in_db
-# works: the gateway SYNCS provider models/creds into this proxy's own Postgres at
-# runtime (mirroring bifrost/sync.py), so no keys are baked into the image or env.
+# Built from python:3.12-slim (multi-arch) - the prebuilt ghcr image is amd64-only
+# and SIGILLs under Apple-Silicon emulation. This engine stores NO provider keys:
+# provider credentials arrive PER REQUEST via LiteLLM "clientside credentials"
+# (see config.yaml), injected by the Agnos boundary from its own vault - nothing is
+# baked into the image or env. Prisma is included only for LiteLLM's OWN operational
+# store (its virtual keys / spend), never provider credentials.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM python:3.12-slim
 
