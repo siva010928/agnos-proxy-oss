@@ -24,9 +24,8 @@ def resolve_timeout_s(config: dict | None) -> int:
     the gateway default (`settings.bifrost_default_timeout_s`). Clamped to
     1..`settings.max_request_timeout_s` so a long-running use case can configure
     up to the 2h ceiling, but a typo can't hang a connection forever. This single
-    resolver is the source of truth shared by the gateway deadline (fallback.py)
-    and the value pushed to Bifrost's per-key network_config (bifrost/sync.py),
-    so the two never disagree.
+    resolver is the source of truth for the per-request deadline the gateway applies
+    (fallback.py), so config and enforcement never disagree.
     """
     cfg = config or {}
     raw = cfg.get("request_timeout_seconds") or cfg.get("default_request_timeout_in_seconds")
@@ -46,9 +45,9 @@ class ResolvedTarget:
     credentials: dict[str, Any] = field(default_factory=dict)
     config: dict[str, Any] = field(default_factory=dict)
     bifrost_key_name: str | None = None
-    # workspace this target belongs to - lets a STATEFUL engine (LiteLLM) select the
-    # workspace's synced model (ws-{ws}--{provider}--{model}), mirroring how Bifrost
-    # selects a managed key. Set by the resolver; not an engine-specific surface.
+    # workspace this target belongs to - carries workspace context for engines that
+    # need it. No engine stores keys or synced models; the provider key is injected
+    # per request. Set by the resolver; not an engine-specific surface.
     workspace_id: str | None = None
     # promoted connection details (also mirrored in config for the engine)
     region: str | None = None

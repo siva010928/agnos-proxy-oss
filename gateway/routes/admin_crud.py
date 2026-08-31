@@ -210,7 +210,7 @@ async def delete_workspace(workspace_id: str):
 
 
 def _prune_bifrost_keys_bg(keys: list[tuple[str, str]]) -> None:
-    """Delete managed keys from Bifrost in the BACKGROUND (best-effort). Kept off
+    """Delete legacy Bifrost keys in the BACKGROUND (best-effort, now a no-op). Kept off
     the request path so a slow/unreachable Bifrost never makes a delete hang."""
     async def _run():
         for provider, name in keys:
@@ -306,9 +306,9 @@ async def add_provider(workspace_id: str, body: ProviderIn):
             await s.flush()
             cfg_id = row.id
         await s.commit()
-    # Register/rotate the Bifrost managed key. Best-effort: a provider that only
-    # runs on the DirectEngine (e.g. Bedrock bearer/SSO creds Bifrost can't use)
-    # must still provision cleanly - the credential is already saved above.
+    # Legacy Bifrost managed-key hook - now a no-op (bsync.sync_one returns (None, None);
+    # the engine is stateless and the provider key is injected per request). The
+    # credential is already saved to the vault above; this call is kept for compatibility.
     name, kid = None, None
     try:
         name, kid = await bsync.sync_one(cfg_id)
@@ -328,8 +328,8 @@ async def add_provider(workspace_id: str, body: ProviderIn):
 @router.patch("/workspaces/{workspace_id}/providers/{provider}")
 async def update_provider_config(workspace_id: str, provider: str, body: dict):
     """Update a provider's NON-secret config (region / endpoint / api_version /
-    request_timeout_seconds) WITHOUT re-entering credentials. Re-syncs the
-    managed key to Bifrost so the new network config takes effect immediately."""
+    request_timeout_seconds) WITHOUT re-entering credentials. Config is applied by
+    the control plane per request; no engine-side key/config sync is needed."""
     new_config = body.get("config")
     if not isinstance(new_config, dict):
         raise HTTPException(400, "config object required")
@@ -355,8 +355,8 @@ async def update_provider_config(workspace_id: str, provider: str, body: dict):
         row.key_version += 1
         cfg_id = row.id
         await s.commit()
-    name, kid = await bsync.sync_one(cfg_id)   # push new network_config to Bifrost
-    try:  # refresh the LiteLLM engine's synced models with the new config (best-effort)
+    name, kid = await bsync.sync_one(cfg_id)   # legacy no-op (engine stateless); returns (None, None)
+    try:  # legacy LiteLLM sync - retired no-op (engine is stateless; no synced models)
         from gateway import litellm_sync
         await litellm_sync.sync_provider_row(cfg_id)
     except Exception:  # noqa: BLE001
@@ -382,7 +382,7 @@ async def delete_provider(workspace_id: str, provider: str):
             await bsync.delete_key(provider, name)
         except Exception:  # noqa: BLE001
             pass
-    try:  # drop this provider's synced models from the LiteLLM engine too (best-effort)
+    try:  # legacy LiteLLM sync - retired no-op (engine is stateless; no synced models)
         from gateway import litellm_sync
         await litellm_sync.delete_provider_models(workspace_id, provider)
     except Exception:  # noqa: BLE001
@@ -1027,7 +1027,7 @@ async def set_engine(body: EngineIn):
 
     stateful = False  # all engines are stateless (they keep no provider keys)
     reconcile = "none"
-    if name == "litellm":            # only LiteLLM needs the slow vault->store sync
+    if name == "litellm":            # legacy path; _bg_reconcile is a no-op (engine stateless)
         reconcile = "background"
         asyncio.create_task(_bg_reconcile(name))
     evidence = {

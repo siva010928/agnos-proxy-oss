@@ -136,7 +136,9 @@ async def lifespan(app: FastAPI):
         _aio2.create_task(_aio2.to_thread(_db.prewarm))
     except Exception:  # noqa: BLE001
         pass
-    # Reconcile workspace creds → Bifrost managed keys (only for bifrost engine)
+    # Legacy Bifrost reconcile hook - now a no-op (engines are stateless; the provider
+    # key is injected per request, never registered in Bifrost). Kept so startup wiring
+    # doesn't break; reconcile_all() returns 0.
     if settings.engine == "bifrost":
         import asyncio as _asyncio
         async def _bifrost_reconcile_bg():
@@ -148,10 +150,9 @@ async def lifespan(app: FastAPI):
                 _log.info("bifrost_reconcile", keys=n, seconds=round(_t.monotonic() - t0, 1))
             except Exception as exc:  # noqa: BLE001
                 _log.warning("bifrost_reconcile_failed", error=str(exc))
-        # Run reconciliation in the BACKGROUND so it doesn't block readiness.
-        # Bifrost persists managed keys across gateway restarts, so already-known
-        # keys keep working immediately; this just refreshes/prunes them. Set
-        # BIFROST_RECONCILE_BLOCKING=true to wait for it (e.g. a clean Bifrost).
+        # Run in the BACKGROUND so it never blocks readiness. It's a no-op today (no
+        # engine-side keys exist); retained only for backward compatibility. Set
+        # BIFROST_RECONCILE_BLOCKING=true to await it.
         if getattr(settings, "bifrost_reconcile_blocking", False):
             await _bifrost_reconcile_bg()
         else:

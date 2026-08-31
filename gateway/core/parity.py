@@ -5,7 +5,7 @@ A generic, vendor-neutral comparison of three approaches to LLM governance:
   - "generic_gateway": a generic provider-multiplexing LLM gateway
   - "ours": this gateway (own-the-policy proxy over a swappable engine)
 
-Single source of truth for docs/PARITY.md and the dashboard's comparison panel.
+Single source of truth for the dashboard's comparison panel (/admin/parity).
 Status reflects OUR implementation: built | built_live_needs_config | not_built.
 """
 from __future__ import annotations

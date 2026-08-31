@@ -120,10 +120,10 @@ class Settings:
     aws_secret_access_key: str | None = os.getenv("AWS_SECRET_ACCESS_KEY")
     aws_session_token: str | None = os.getenv("AWS_SESSION_TOKEN")
     aws_region_name: str = os.getenv("AWS_REGION_NAME", "us-east-1")
-    # Block startup on the Bifrost key reconcile (default: run it in background so
-    # the gateway is ready in seconds; keys persist in Bifrost across restarts).
+    # Block startup on the (now no-op) Bifrost reconcile. Default: background, so the
+    # gateway is ready in seconds. Engines are stateless - no keys persist in Bifrost.
     bifrost_reconcile_blocking: bool = os.getenv("BIFROST_RECONCILE_BLOCKING", "false").lower() == "true"
-    # Default per-request timeout (seconds) pushed to Bifrost per managed key.
+    # Default per-request upstream timeout (seconds), applied by the gateway per request.
     # Bifrost's own default is 30s, which 504s on long completions - raise it so
     # prod components don't fail. Admin can override per provider in its config.
     bifrost_default_timeout_s: int = int(os.getenv("BIFROST_DEFAULT_REQUEST_TIMEOUT_S", "120"))

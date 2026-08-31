@@ -91,7 +91,7 @@ async def chat_completions(request: Request):
                                   budget check sees the new spend immediately.
 
     Every step is OURS \u2014 the engine boundary is purely the OpenAI HTTP wire
-    plus the encapsulated managed-key side-channel header set by BifrostEngine.
+    plus the per-request provider-key header injected by BifrostEngine (direct key).
     An engine swap (POST /admin/engine) does not change the governance behaviour.
     """
     started = time.perf_counter()

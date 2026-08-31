@@ -466,7 +466,7 @@ def validate_provider_in(body: Any) -> list[dict[str, Any]]:
         if api_version and not re.match(r"^\d{4}-\d{2}-\d{2}(-preview)?$", str(api_version)):
             errors.append(err(["body", "config", "api_version"],
                               f"api_version must look like YYYY-MM-DD or YYYY-MM-DD-preview (got '{api_version}')"))
-    # Optional per-provider request timeout (seconds) → pushed to Bifrost.
+    # Optional per-provider request timeout (seconds) → applied by the gateway per request.
     rt = config.get("request_timeout_seconds")
     if rt not in (None, ""):
         try:

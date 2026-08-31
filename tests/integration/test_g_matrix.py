@@ -2,7 +2,7 @@
 
 Six surface families exercised through the real gateway pipeline (auth \u2192
 routing \u2192 guardrails \u2192 governance) with `ENGINE=echo` so every test costs
-nothing.  Each test corresponds to one G-row in `docs/COVERAGE.md`.
+nothing.  Each test corresponds to one G-row (G1-G6) documented below.
 
   G1  Chat, non-streaming                  \u2014 simple/multi-turn/system/multimodal/
                                              max_tokens/forward-compat/finish_reason
